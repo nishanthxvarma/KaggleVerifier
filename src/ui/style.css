@@ -1,0 +1,87 @@
+/* Premium Fintech Theme CSS for KaggleVerifier */
+[data-testid="stAppViewContainer"] {
+    background-color: #0F172A;
+    color: #F8FAFC;
+    font-family: 'Inter', sans-serif;
+}
+
+[data-testid="stSidebar"] {
+    background-color: #1E293B;
+    border-right: 1px solid #334155;
+}
+
+/* Glassmorphism for metric cards and containers */
+.glass-container {
+    background: rgba(30, 41, 59, 0.7);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 24px;
+    margin-bottom: 20px;
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+}
+
+/* Custom styling for headers */
+h1, h2, h3 {
+    color: #F8FAFC !important;
+    font-weight: 600 !important;
+}
+
+/* Vibrant gradients for buttons */
+.stButton > button {
+    background: linear-gradient(135deg, #3B82F6 0%, #2DD4BF 100%);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 24px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.stButton > button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(59, 130, 246, 0.5);
+    border: none;
+    color: white;
+}
+
+/* File uploader hover */
+[data-testid="stFileUploadDropzone"] {
+    border: 2px dashed #475569;
+    border-radius: 12px;
+    background-color: #1E293B;
+    transition: all 0.3s ease;
+}
+
+[data-testid="stFileUploadDropzone"]:hover {
+    border-color: #3B82F6;
+    background-color: rgba(59, 130, 246, 0.05);
+}
+
+/* Metric value styling */
+[data-testid="stMetricValue"] {
+    font-size: 2.5rem !important;
+    font-weight: 700 !important;
+    color: #38BDF8 !important;
+}
+
+/* Hide Streamlit components */
+#MainMenu {visibility: hidden;}
+footer {visibility: hidden;}
+
+/* Custom Footer */
+.custom-footer {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    background-color: #0F172A;
+    border-top: 1px solid #334155;
+    padding: 12px 0;
+    text-align: center;
+    color: #94A3B8;
+    font-size: 14px;
+    z-index: 999;
+}

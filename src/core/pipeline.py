@@ -1,0 +1,40 @@
+import os
+import sys
+import pandas as pd
+from typing import Tuple, Dict, Any
+
+# Ensure correct relative imports
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from core.kaggle_api import download_and_read_kaggle_dataset, process_upload
+from ml.features import extract_features
+from ml.model import KaggleMetaClassifier
+
+class DetectionPipeline:
+    def __init__(self, model_path='models/meta_classifier.pkl'):
+        # Load the meta-classifier
+        # If it doesn't exist, bootstrap it immediately
+        self.classifier = KaggleMetaClassifier(model_path)
+        if not self.classifier.is_trained:
+            from ml.model import bootstrap_dummy_model
+            bootstrap_dummy_model()
+            self.classifier.load()
+
+    def process_url(self, url: str) -> Tuple[float, dict, pd.DataFrame]:
+        df = download_and_read_kaggle_dataset(url)
+        return self._run_analysis(df)
+
+    def process_file(self, file) -> Tuple[float, dict, pd.DataFrame]:
+        df = process_upload(file)
+        # Limit rows for uploads to prevent memory crashes
+        if len(df) > 50000:
+            df = df.sample(n=50000, random_state=42)
+        return self._run_analysis(df)
+
+    def _run_analysis(self, df: pd.DataFrame) -> Tuple[float, dict, pd.DataFrame]:
+        features = extract_features(df)
+        if not features:
+            raise ValueError("Dataset parsing failed: zero rows/columns or entirely unparseable!")
+
+        probability_real = self.classifier.predict(features)
+        
+        return float(probability_real), features, df
