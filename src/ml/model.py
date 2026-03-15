@@ -15,13 +15,13 @@ class KaggleMetaClassifier:
     def __init__(self, model_path='models/meta_classifier.pkl'):
         self.model_path = model_path
         self.model = XGBClassifier(
-            n_estimators=50, 
-            learning_rate=0.02, 
-            max_depth=2, 
-            min_child_weight=3,
-            subsample=0.7,
-            colsample_bytree=0.7,
-            gamma=0.5,
+            n_estimators=150, 
+            learning_rate=0.05, 
+            max_depth=4, 
+            min_child_weight=2,
+            subsample=0.8,
+            colsample_bytree=0.8,
+            gamma=0.1,
             random_state=42
         )
         self.is_trained = False
@@ -136,4 +136,5 @@ def bootstrap_dummy_model():
     print("Bootstrap complete. Saved to models/meta_classifier.pkl")
 
 if __name__ == "__main__":
-    bootstrap_dummy_model()
+    from train_real import train_robust_model
+    train_robust_model()

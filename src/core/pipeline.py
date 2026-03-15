@@ -12,11 +12,11 @@ from ml.model import KaggleMetaClassifier
 class DetectionPipeline:
     def __init__(self, model_path='models/meta_classifier.pkl'):
         # Load the meta-classifier
-        # If it doesn't exist, bootstrap it immediately
+        # If it doesn't exist, bootstrap it immediately using real-world tabular distributions
         self.classifier = KaggleMetaClassifier(model_path)
         if not self.classifier.is_trained:
-            from ml.model import bootstrap_dummy_model
-            bootstrap_dummy_model()
+            from ml.train_real import train_robust_model
+            train_robust_model()
             self.classifier.load()
 
     def process_url(self, url: str) -> Tuple[float, dict, pd.DataFrame]:
