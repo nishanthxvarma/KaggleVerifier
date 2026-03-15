@@ -124,6 +124,9 @@ def train_robust_model():
         return
         
     X_df = pd.DataFrame(X_features).fillna(0)
+    if 'context_flags' in X_df.columns:
+        X_df = X_df.drop('context_flags', axis=1)
+    
     y_ser = pd.Series(y_labels)
     
     print(f"\nFinal Extracted Training Dataset Shape: {X_df.shape}")

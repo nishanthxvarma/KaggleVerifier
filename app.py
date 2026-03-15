@@ -109,7 +109,16 @@ else:
             
         st.markdown(f"<h2 style='text-align: center; margin-top: 0px;'>VERDICT: {verdict}</h2>", unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
-        
+    
+    # AI Context tooltips below gauge
+    context = feats.get('context_flags', {})
+    if context.get('clustered_observations', False):
+         st.info("💡 **AI Insight:** High duplicates detected, but strong dataset entropy indicates natural clustered data (e.g. repeated measurements) rather than synthetic inflation. Scoring rules relaxed.")
+    if context.get('narrow_numeric_range', False):
+         st.info("💡 **AI Insight:** Narrow numeric boundaries detected (e.g. surveys or ratings). Strict integer/rounded number penalties were bypassed.")
+    if feats.get('missing_pct', 1.0) == 0.0 and feats.get('mean_entropy', 0.0) > 4.5:
+         st.success("✨ **AI Check:** The dataset is perfectly clean (0 missing values), but high randomness points to flawless preprocessing rather than synthetic generation.")
+         
     st.markdown("<hr style='border: 1px solid #334155; margin: 40px 0;'>", unsafe_allow_html=True)
     
     # Feature Analytics Dashboard
@@ -118,7 +127,8 @@ else:
     # Cards
     m1, m2, m3, m4 = st.columns(4)
     with m1:
-        render_metric_card("Duplicate Rows", f"{feats['duplicate_pct']:.1%}", trend="Lower is better for natural data")
+        dup_trend = "Natural cluster detected" if context.get('clustered_observations', False) else "Lower is better for natural data"
+        render_metric_card("Duplicate Rows", f"{feats['duplicate_pct']:.1%}", trend=dup_trend)
     with m2:
         render_metric_card("Missing Volatility", f"{feats['missing_variance']:.2f}", trend="Too uniform = fake")
     with m3:

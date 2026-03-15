@@ -35,6 +35,20 @@ class DetectionPipeline:
         if not features:
             raise ValueError("Dataset parsing failed: zero rows/columns or entirely unparseable!")
 
-        probability_real = self.classifier.predict(features)
+        probability_real = float(self.classifier.predict(features))
         
-        return float(probability_real), features, df
+        # --- Post-Processing Calibration & Rule-Based Heuristics ---
+        context = features.get('context_flags', {})
+        
+        # 1. Rule based boosting for natural anomalies that often cause false positives
+        if 0.4 < probability_real < 0.8:
+            if context.get('clustered_observations', False):
+                probability_real = min(0.88, probability_real + 0.25)
+            elif context.get('narrow_numeric_range', False) and context.get('benford_bypassed', False):
+                probability_real = min(0.85, probability_real + 0.15)
+                
+        # 2. Soft constraint: perfectly clean rows shouldn't punish score if entropy is strong
+        if features.get('missing_pct', 1.0) == 0.0 and features.get('mean_entropy', 0.0) > 4.5:
+            probability_real = min(0.96, probability_real + 0.05)
+            
+        return probability_real, features, df

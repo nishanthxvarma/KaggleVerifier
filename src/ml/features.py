@@ -23,9 +23,10 @@ def extract_features(df: pd.DataFrame) -> dict:
         return {}
 
     features = {}
+    context_flags = {} # Used for UI tooltips
 
     # 1. Exact Duplicates %
-    features['duplicate_pct'] = df.duplicated().mean()
+    raw_dup_pct = df.duplicated().mean()
 
     # 2. Missing Value %
     features['missing_pct'] = df.isna().mean().mean()
@@ -39,24 +40,38 @@ def extract_features(df: pd.DataFrame) -> dict:
     features['col_sanity_score'] = suspicious_cols / n_cols if n_cols else 0.0
 
     # 5. Mean Cardinality
-    # Low cardinality across all columns often means simulated categorical data
     cardinality_pcts = [df[c].nunique() / n_rows for c in df.columns]
     features['mean_cardinality'] = np.mean(cardinality_pcts)
 
-    # 6. Rounded Numbers Ratio
-    # Real continuous data rarely ends strictly in 00 or forms perfect integers frequently.
+    # 6. Rounded Numbers Ratio & Conditional Bounding
+    # If the range of a column is very small (e.g. 1-10 rating, ages), high integer/rounded ratios are perfectly natural.
     if not num_df.empty:
         total_nums = 0
         rounded_nums = 0
+        narrow_range_cols = 0
         for c in num_df.columns:
             vals = num_df[c].dropna().astype(float)
             if len(vals) == 0: continue
+            
+            # Check if narrow range bounds
+            if vals.max() - vals.min() < 100:
+                narrow_range_cols += 1
+                
             total_nums += len(vals)
-            # Check if it ends in exactly .00 or modulus 10 == 0 if int
             rounded_nums += np.sum((vals % 10 == 0) | (vals % 1 == 0))
-        features['rounded_num_ratio'] = rounded_nums / total_nums if total_nums else 0.0
+            
+        raw_rounded = rounded_nums / total_nums if total_nums else 0.0
+        
+        # Soften penalty if lots of narrow range columns
+        if narrow_range_cols / len(num_df.columns) > 0.5:
+            features['rounded_num_ratio'] = raw_rounded * 0.5
+            context_flags['narrow_numeric_range'] = True
+        else:
+            features['rounded_num_ratio'] = raw_rounded
+            context_flags['narrow_numeric_range'] = False
     else:
         features['rounded_num_ratio'] = 0.0
+        context_flags['narrow_numeric_range'] = False
 
     # 7. Integer vs Float Fraction
     if not num_df.empty:
@@ -122,10 +137,14 @@ def extract_features(df: pd.DataFrame) -> dict:
     benford_maes = []
     if not num_df.empty:
         for c in num_df.columns:
-            mae = benford_mae(num_df[c])
-            if not math.isnan(mae):
-                benford_maes.append(mae)
+            # Only apply Benford's to columns spanning multi magnitudes (max > 100)
+            if num_df[c].max() > 100 and num_df[c].var() > 10:
+                mae = benford_mae(num_df[c])
+                if not math.isnan(mae):
+                    benford_maes.append(mae)
+                    
     features['benfords_law_mae'] = np.mean(benford_maes) if benford_maes else 0.0
+    context_flags['benford_bypassed'] = len(benford_maes) == 0
 
     # 15. Mean Shannon Entropy
     def shannon_entropy(series):
@@ -134,6 +153,15 @@ def extract_features(df: pd.DataFrame) -> dict:
         
     entropies = [shannon_entropy(df[c]) for c in df.columns]
     features['mean_entropy'] = np.mean(entropies) if entropies else 0.0
+    
+    # Apply duplication scaling now that we have entropy
+    if raw_dup_pct > 0.10 and features['mean_entropy'] > 3.5:
+        # High duplicate + high entropy = natural clustered observations
+        features['duplicate_pct'] = raw_dup_pct * 0.3 # Dampen penalty
+        context_flags['clustered_observations'] = True
+    else:
+        features['duplicate_pct'] = raw_dup_pct
+        context_flags['clustered_observations'] = False
 
     # 16. Outlier Fraction (Isolation Forest)
     if not num_df.empty and len(num_df) > 10:
@@ -166,6 +194,7 @@ def extract_features(df: pd.DataFrame) -> dict:
         if pd.isna(v) or math.isnan(v):
             features[k] = 0.0
 
+    features['context_flags'] = context_flags
     return features
 
 def evaluate_benfords_law(series: pd.Series):
