@@ -8,3 +8,4 @@ scipy>=1.11.0
 shap>=0.44.0
 python-dotenv>=1.0.0
 kaggle>=1.6.0
+tqdm>=4.66.0
