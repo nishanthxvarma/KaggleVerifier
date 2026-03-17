@@ -15,13 +15,13 @@ class KaggleMetaClassifier:
     def __init__(self, model_path='models/meta_classifier.pkl'):
         self.model_path = model_path
         self.model = XGBClassifier(
-            n_estimators=150, 
-            learning_rate=0.05, 
-            max_depth=4, 
-            min_child_weight=2,
-            subsample=0.8,
-            colsample_bytree=0.8,
-            gamma=0.1,
+            n_estimators=500, 
+            learning_rate=0.15, 
+            max_depth=8, 
+            min_child_weight=1,
+            subsample=1.0,
+            colsample_bytree=1.0,
+            gamma=0.0,
             random_state=42
         )
         self.is_trained = False

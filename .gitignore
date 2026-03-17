@@ -2,6 +2,6 @@ __pycache__/
 *.pyc
 .env
 data/
-models/
+
 .pytest_cache/
 .DS_Store

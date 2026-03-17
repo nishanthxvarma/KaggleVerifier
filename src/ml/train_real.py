@@ -27,11 +27,11 @@ def get_real_datasets():
     except Exception as e:
         print(f"Error loading local dataset: {e}")
         
-    # Generate some high-quality synthetic "real" datasets (which act as baselines for structural authentic tabular data)
-    for i in range(5):
+    # Generate robust high-quality synthetic "real" datasets (acting as comprehensive structural baselines)
+    for i in range(50):
         X, y = make_classification(
             n_samples=np.random.randint(500, 2000), 
-            n_features=np.random.randint(10, 30),
+            n_features=np.random.randint(15, 40),
             n_informative=np.random.randint(5, 10),
             random_state=i*42
         )
