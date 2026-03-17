@@ -54,7 +54,22 @@ def corrupt_dataset(df: pd.DataFrame, method: str) -> pd.DataFrame:
     elif method == "normal": # Faked with standard normal distributions mimicking mean/std
         for col in num_cols:
             if len(df[col].dropna()) > 0:
-                df_fake[col] = np.random.normal(df[col].mean(), df[col].std(), size=len(df))
+                # Add a bit of natural skew to make it harder
+                noise = np.random.normal(df[col].mean(), df[col].std(), size=len(df))
+                if np.random.rand() > 0.5:
+                    noise = noise ** 2 / (noise.max() + 1e-6)
+                df_fake[col] = noise
+    elif method == "linear_combo": # Replace columns with linear combinations of others
+        if len(num_cols) > 2:
+            for i in range(len(num_cols)):
+                target_col = num_cols[i]
+                others = [c for c in num_cols if c != target_col]
+                c1, c2 = np.random.choice(others, 2, replace=False)
+                df_fake[target_col] = df[c1] * 0.5 + df[c2] * 0.5 + np.random.normal(0, 0.1, size=len(df))
+    elif method == "outliers": # Inject massive un-natural outliers
+        for col in num_cols:
+            mask = np.random.rand(len(df_fake)) < 0.05
+            df_fake.loc[mask, col] = df_fake[col].mean() + 10 * df_fake[col].std() * np.random.choice([-1, 1], size=mask.sum())
     elif method == "rounded": # Tampered by aggressive rounding
         for col in num_cols:
             if len(df[col].dropna()) > 0:
@@ -95,6 +110,10 @@ def train_robust_model():
             # Sub-sample augmentations to create more "Real" examples
             for seed in [42, 73, 101, 2024]:
                 df_sub = df.sample(frac=0.7, random_state=seed)
+                # Add some "Real" noise that doesn't break distribution
+                if np.random.rand() > 0.5:
+                    for col in df_sub.select_dtypes(include=[np.number]).columns:
+                        df_sub[col] += np.random.normal(0, df_sub[col].std() * 0.01, size=len(df_sub))
                 feats_sub = extract_features(df_sub)
                 if feats_sub:
                     X_features.append(feats_sub)
@@ -102,7 +121,7 @@ def train_robust_model():
             
     # 2. Process Fake/Tampered Datasets (Label = 0)
     print("\n[2/2] Generating and extracting features from SYNTHETIC/TAMPERED anomalies...")
-    corruption_methods = ["uniform", "normal", "rounded", "shuffled", "duplicated"]
+    corruption_methods = ["uniform", "normal", "rounded", "shuffled", "duplicated", "linear_combo", "outliers"]
     
     for df in tqdm(real_dfs, desc="Fake Data Generation"):
         for method in corruption_methods:

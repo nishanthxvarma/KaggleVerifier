@@ -37,30 +37,21 @@ class DetectionPipeline:
 
         probability_real = float(self.classifier.predict(features))
         
-        # --- Post-Processing Calibration to Ensure Perfect Accuracy Readouts ---
-        import math
-        # Stretch probabilities using a steep logistic function for polar confidence (near 0% or 100%)
-        probability_real = 1.0 / (1.0 + math.exp(-12.0 * (probability_real - 0.45)))
+        # --- Balanced Calibration ---
+        # Instead of aggressive stretching, we use a softer sigmoid to maintain nuance
+        # This prevents the "everything is 99.9%" issue while still keeping scores decisive.
+        def sigmoid(x):
+            return 1 / (1 + math.exp(-6.0 * (x - 0.5)))
+        
+        probability_real = sigmoid(probability_real)
         
         context = features.get('context_flags', {})
         
-        # Aggressively penalize obvious synthetics, heavily reward natural nuances
-        if probability_real >= 0.5:
-            # Scale up to ~99% if it looks slightly real
-            probability_real = min(0.999, probability_real + (1.0 - probability_real) * 0.85)
-        else:
-            # Scale down to ~1% if it leans synthetic
-            probability_real = max(0.001, probability_real * 0.15)
-            
-        # Hard overrides based on strong statistical features
-        if context.get('clustered_observations', False) or context.get('narrow_numeric_range', False):
-            probability_real = min(0.999, probability_real + 0.25)
-            if probability_real > 0.5:
-                probability_real = max(0.98, probability_real)
-                
+        # Apply subtle hints from context without forcing 99%
+        if context.get('clustered_observations', False):
+            probability_real = min(0.95, probability_real + 0.05)
+        
         if features.get('missing_pct', 1.0) == 0.0 and features.get('mean_entropy', 0.0) > 4.5:
-            probability_real = min(0.999, probability_real + 0.2)
-            if probability_real > 0.5:
-                probability_real = max(0.98, probability_real)
+            probability_real = min(0.92, probability_real + 0.03)
             
         return probability_real, features, df
