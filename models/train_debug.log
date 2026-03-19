@@ -1,0 +1,27 @@
+
+FAILED: Number of informative, redundant and repeated features must sum to less than the number of total features
+Traceback (most recent call last):
+  File "C:\Users\nisha\OneDrive\Desktop\kag\KaggleVerifier\tmp_debug_train.py", line 15, in <module>
+    train_robust_model()
+    ~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\nisha\OneDrive\Desktop\kag\KaggleVerifier\src\ml\train_real.py", line 310, in train_robust_model
+    real_dfs = get_real_datasets()
+  File "C:\Users\nisha\OneDrive\Desktop\kag\KaggleVerifier\src\ml\train_real.py", line 177, in get_real_datasets
+    dfs += _gen_classification_variants(50)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^
+  File "C:\Users\nisha\OneDrive\Desktop\kag\KaggleVerifier\src\ml\train_real.py", line 73, in _gen_classification_variants
+    X, y = make_classification(
+           ~~~~~~~~~~~~~~~~~~~^
+        n_samples=int(n_samples), n_features=int(n_features),
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        n_informative=n_info, random_state=i,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Python\Lib\site-packages\sklearn\utils\_param_validation.py", line 218, in wrapper
+    return func(*args, **kwargs)
+  File "C:\Python\Lib\site-packages\sklearn\datasets\_samples_generator.py", line 230, in make_classification
+    raise ValueError(
+    ...<3 lines>...
+    )
+ValueError: Number of informative, redundant and repeated features must sum to less than the number of total features

@@ -37,6 +37,7 @@ except ImportError:
 from sklearn.datasets import (
     load_diabetes, load_breast_cancer, load_iris,
     load_wine, fetch_california_housing, make_classification,
+    load_digits, load_linnerud
 )
 
 
@@ -52,6 +53,8 @@ def _get_sklearn_real():
         lambda: load_breast_cancer(as_frame=True).frame,
         lambda: load_iris(as_frame=True).frame,
         lambda: load_wine(as_frame=True).frame,
+        lambda: load_digits(as_frame=True).frame.sample(500, random_state=42),
+        lambda: load_linnerud(as_frame=True).frame,
         lambda: fetch_california_housing(as_frame=True).frame.sample(2000, random_state=42),
     ]
     for loader in loaders:
@@ -62,14 +65,13 @@ def _get_sklearn_real():
     return dfs
 
 
-def _gen_classification_variants(n=50):
-    """50 make_classification variants acting as diverse tabular positives."""
+def _gen_classification_variants(n=60):
+    """60 make_classification variants. Half are messy (noise+NaN), half are clean (UCI-style)."""
     dfs = []
     for i in range(n):
         rng = np.random.default_rng(i * 17 + 3)
-        n_samples  = rng.integers(400, 2500)
-        n_features = rng.integers(10, 40)
-        # Ensure n_informative + n_redundant (default 2) < n_features
+        n_samples  = rng.integers(300, 3000)
+        n_features = rng.integers(6, 45)
         n_info     = int(rng.integers(3, max(4, n_features - 2)))
         X, y = make_classification(
             n_samples=int(n_samples), n_features=int(n_features),
@@ -77,12 +79,17 @@ def _gen_classification_variants(n=50):
         )
         df = pd.DataFrame(X, columns=[f"f{j}" for j in range(X.shape[1])])
         df["target"] = y
-        # Add natural noise
-        for c in df.select_dtypes(include=[np.number]).columns:
-            df[c] += rng.normal(0, df[c].std() * 0.02, size=len(df))
-        # Add 1-5 % NaN naturally
-        mask = rng.random(df.shape) < rng.uniform(0.01, 0.05)
-        df[mask] = np.nan
+        
+        # Every 2nd variant is "Perfectly Clean" (No noise, No NaN) to simulate UCI
+        if i % 2 == 0:
+            pass 
+        else:
+            # Add natural noise
+            for c in df.select_dtypes(include=[np.number]).columns:
+                df[c] += rng.normal(0, df[c].std() * 0.02, size=len(df))
+            # Add 1-5 % NaN naturally
+            mask = rng.random(df.shape) < rng.uniform(0.01, 0.05)
+            df[mask] = np.nan
         dfs.append(df)
     return dfs
 

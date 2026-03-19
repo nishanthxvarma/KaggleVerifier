@@ -18,6 +18,7 @@ from src.ui.components import (
     render_explanation_panel,
     plot_autocorrelation,
     render_timeseries_stats_table,
+    render_verdict_badge,
 )
 
 # ── Page Config ──────────────────────────────────────────────────
@@ -45,14 +46,14 @@ pipeline = get_pipeline()
 # ── Header ────────────────────────────────────────────────────────
 st.markdown(
     "<h1 style='text-align:center; font-size:3.5rem; letter-spacing:-2px; margin-bottom:0;'>"
-    "Kaggle<span style='color:#38BDF8;'>Verifier</span> <sup style='font-size:1rem;color:#8B5CF6;'>v2</sup>"
+    "Kaggle<span style='color:#38BDF8;'>Verifier</span> <sup style='font-size:1rem;color:#10B981;'>v3</sup>"
     "</h1>",
     unsafe_allow_html=True,
 )
 st.markdown(
     "<h3 style='text-align:center; color:#94A3B8; font-weight:400; font-size:1.2rem; "
     "margin-top:0; margin-bottom:40px;'>"
-    "Ensemble-Powered · Domain-Adaptive · Sensor & IoT Aware Dataset Authenticity Detector"
+    "Truthful Detector · Deep Pipeline · Unsupervised Manifold Analytics"
     "</h3>",
     unsafe_allow_html=True,
 )
@@ -127,24 +128,12 @@ else:
     cx1, cx2, cx3 = st.columns([1, 2, 1])
     with cx2:
         render_dataset_type_badge(context)
+        render_verdict_badge(prob)
 
     # Gauge (centered)
     g1, g2, g3 = st.columns([1, 2, 1])
     with g2:
         render_probability_gauge(prob, ci_lo, ci_hi)
-
-        # Verdict label
-        if prob > 0.60:
-            verdict = "<span style='color:#10B981;'>✅ AUTHENTIC DATASET</span>"
-        elif prob > 0.35:
-            verdict = "<span style='color:#F59E0B;'>⚠️ SUSPICIOUS / ANOMALIES DETECTED</span>"
-        else:
-            verdict = "<span style='color:#EF4444;'>❌ LIKELY SYNTHETIC / TAMPERED</span>"
-
-        st.markdown(
-            f"<h2 style='text-align:center; margin-top:0;'>VERDICT: {verdict}</h2>",
-            unsafe_allow_html=True,
-        )
 
     st.markdown("</div>", unsafe_allow_html=True)
 

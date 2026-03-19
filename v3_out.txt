@@ -1,0 +1,29 @@
+Starting KaggleVerifier v3 Verification Suite...
+
+Ensemble loaded from models/ensemble_v2.pkl
+[PIPELINE] Loaded ensemble v2 from disk.
+--- Test 1: Small Clean Real (UCI-style) ---
+Result (Diabetes): 99.0%
+KS-Stat: 0.280 | Entropy: 5.78 | ReconErr: 0.1839
+Reasons: ['Strong tabular realism: natural distribution & manifold fit (+0.40)']
+
+--- Test 2: Large Synthetic (Titanic 1M proxy) ---
+Result (100k Synthetic): 1.0%
+Reasons: ['Perfectly uniform marginal distributions detected (-0.40)']
+
+--- Test 3: Perfectly Clean Classification ---
+Result (Clean 500 rows): 15.1%
+Reasons: []
+
+--- FINAL VERDICT ---
+Traceback (most recent call last):
+  File "C:\Users\nisha\OneDrive\Desktop\kag\KaggleVerifier\verify_v3.py", line 48, in <module>
+    verify_v3()
+    ~~~~~~~~~^^
+  File "C:\Users\nisha\OneDrive\Desktop\kag\KaggleVerifier\verify_v3.py", line 45, in verify_v3
+    print("\u274c FAILURE: Accuracy targets not fully met yet.")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Python\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u274c' in position 0: character maps to <undefined>

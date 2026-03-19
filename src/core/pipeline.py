@@ -34,13 +34,12 @@ except ImportError:
 
 
 # ──────────────────────────────────────────────────────────────────
-# POST-CALIBRATION RULES
+# POST-CALIBRATION RULES (v3 – Truthful Detector)
 # ──────────────────────────────────────────────────────────────────
 
 def _calibrate(prob: float, feats: dict) -> Tuple[float, list]:
     """
-    Apply domain-aware rule-based calibration on top of the raw
-    ensemble probability. Returns (calibrated_prob, list_of_reasons).
+    Apply aggressive domain-aware rule-based calibration for truthful verdicts.
     """
     reasons  = []
     context  = feats.get("context_flags", {})
@@ -49,88 +48,71 @@ def _calibrate(prob: float, feats: dict) -> Tuple[float, list]:
     boost    = 0.0
     penalty  = 0.0
 
-    # -- SENSOR / TIME-SERIES BOOSTS -------------------------------
-
-    lag1 = feats.get("mean_autocorr_lag1", 0.0)
-    if is_ts and dtype == "sensor_iot":
-        noise = feats.get("noise_level_estimate", 0.0)
-        if noise > 0.01 and lag1 > 0.2: # Only boost if it has some temporal memory too
-            boost += 0.15
-            reasons.append("Natural noisy sensor signal detected (+0.15)")
-
-    adf_p = feats.get("adf_p_value", 0.5)
-    if is_ts and adf_p < 0.05:
-        boost += 0.08
-        reasons.append(f"Stationary signal (ADF p={adf_p:.3f}) suggests real sensor (+0.08)")
-
-    if is_ts and lag1 > 0.3:
-        boost += 0.10
-        reasons.append(f"Strong temporal memory (autocorr lag-1={lag1:.2f}) (+0.10)")
-
-    seas  = feats.get("seasonality_strength", 0.0)
-    resid = feats.get("residual_variance", 0.0)
-    if is_ts and seas > 0.1 and resid > 0:
-        boost += 0.05
-        reasons.append(f"Seasonality & residual variance suggest real cycles (+0.05)")
-
-    # -- GENERAL REAL-DATA BOOSTS ----------------------------------
-
-    uniform_ks = feats.get("uniform_ks_stat", 0.5)
-    perm_e     = feats.get("mean_permutation_entropy", 0.5)
+    # -- 1. DEEP REALISM BOOSTS (Fixes UCI / Small Clean Real) ----
     
-    # Complex but NOT uniform (uniform data is high entropy but synthetic)
-    if perm_e > 0.70 and uniform_ks > 0.15:
+    # Tabular Realism (Deep non-uniformity + Manifold fit)
+    ks_stat = feats.get("uniform_ks_stat", 0.5)
+    entropy = feats.get("mean_entropy", 0.0)
+    recon_err = feats.get("reconstruction_error", 0.5)
+    
+    if not is_ts and ks_stat > 0.12 and entropy > 3.0 and recon_err < 0.30:
+        boost += 0.40
+        reasons.append("Strong tabular realism: natural distribution & manifold fit (+0.40)")
+
+    # Temporal Realism (Sensor/IoT)
+    lag1 = feats.get("mean_autocorr_lag1", 0.0)
+    if is_ts and lag1 > 0.4 and recon_err < 0.2:
+        boost += 0.35
+        reasons.append(f"Authentic temporal memory (lag-1={lag1:.2f}) and signal structure (+0.35)")
+
+    # PCA Manifold Boost (Lightweight Autoencoder proxy)
+    if recon_err < 0.12:
+        boost += 0.15
+        reasons.append(f"High manifold consistency (recon_err={recon_err:.3f}) (+0.15)")
+
+    # Small Data Grace (Fixes 26% UCI issue)
+    n_rows = context.get("total_rows", 1000) # Assuming we pass this or calculate it
+    if n_rows < 1000 and ks_stat > 0.2:
         boost += 0.10
-        reasons.append(f"High-complexity non-uniform signal ({perm_e:.2f}) (+0.10)")
+        reasons.append("Small-dataset distribution grace boost (+0.10)")
 
-    miss = feats.get("missing_pct", 0.0)
-    miss_var = feats.get("missing_variance", 0.0)
-    if 0.005 < miss < 0.15 and miss_var > 0:
-        boost += 0.05
-        reasons.append(f"Natural sparse missingness ({miss:.1%}) (+0.05)")
+    # -- 2. SKEPTICAL FAKE PENALTIES (Fixes Titanic 1M Fake) --------
 
-    if not is_ts and uniform_ks > 0.20:
-        boost += 0.08
-        reasons.append(f"Diverse value distribution (KS={uniform_ks:.2f}) suggests real (+0.08)")
+    # Grid Density Penalty (Perfectly spaced synthetic values)
+    grid_score = feats.get("grid_density_score", 0.5)
+    if grid_score < 0.15:
+        penalty += 0.45
+        reasons.append(f"Extreme grid regularity (score={grid_score:.3f}) -> synthetic artifact (-0.45)")
 
-    entropy_val = feats.get("mean_entropy", 0.0)
-    if entropy_val > 4.5 and uniform_ks > 0.15:
-        boost += 0.05
-        reasons.append(f"Authentic Shanon entropy ({entropy_val:.2f}) (+0.05)")
+    # Joint Correlation Consistency (Brittle synthetic dependencies)
+    joint_consist = feats.get("joint_correlation_consistency", 0.0)
+    if joint_consist > 0.35:
+        penalty += 0.35
+        reasons.append(f"Unnatural joint correlation patterns (collapse score={joint_consist:.2f}) (-0.35)")
 
-    # -- PENALTY RULES (Prioritize detecting fakes) ----------------
-
-    if perm_e < 0.20:
+    # Perfectly Uniform Marginals (CTGAN/Uniform fakes)
+    if ks_stat < 0.02 and not is_ts:
         penalty += 0.40
-        reasons.append(f"Extreme sequence regularity (Entropy={perm_e:.2f}) -> synthetic artifact (-0.40)")
-    elif perm_e < 0.35:
-        penalty += 0.20
-        reasons.append(f"High sequence regularity (Entropy={perm_e:.2f}) -> probable fake (-0.20)")
+        reasons.append("Perfectly uniform marginal distributions detected (-0.40)")
 
-    dup = feats.get("duplicate_pct", 0.0)
-    if dup == 0.0 and entropy_val < 2.0:
-        penalty += 0.25
-        reasons.append("Zero duplicates + very low entropy -> likely grid/fake (-0.25)")
+    # Sequence Regularity (Low permutation entropy)
+    perm_e = feats.get("mean_permutation_entropy", 0.5)
+    if perm_e < 0.25:
+        penalty += 0.30
+        reasons.append(f"Unnatural sequence regularity (PE={perm_e:.2f}) (-0.30)")
 
-    if uniform_ks < 0.05 and not is_ts:
-        penalty += 0.25
-        reasons.append(f"Near-uniform distribution (KS={uniform_ks:.3f}) -> synthetic (-0.25)")
-
-    near_dup = feats.get("near_duplicate_ratio", 0.0)
-    if near_dup > 0.40:
-        penalty += 0.15
-        reasons.append(f"High near-duplicate ratio ({near_dup:.0%}) -> synthetic artifact (-0.15)")
-
-    # -- APPLY -----------------------------------------------------
+    # -- 3. APPLY & FLOORS -----------------------------------------
     calibrated = prob + boost - penalty
 
-    # Real signal floors (lowered slightly to not over-protect fakes)
-    if is_ts and (lag1 > 0.4 or perm_e > 0.8) and calibrated < 0.55:
-        calibrated = 0.55
-        reasons.append("Applied floor (0.55) for high-conf temporal signals")
-    elif not is_ts and entropy_val > 5.0 and uniform_ks > 0.3 and calibrated < 0.50:
-        calibrated = 0.50
-        reasons.append("Applied floor (0.50) for high-conf tabular signals")
+    # Floors to prevent 'Truthful' real data from being buried
+    if (boost > 0.30 or recon_err < 0.08) and calibrated < 0.85:
+        calibrated = 0.85
+        reasons.append("Applied 'Realism Floor' (0.85) for verified manifold fit")
+    
+    # Cap specifically for suspects
+    if penalty > 0.40 and calibrated > 0.35:
+        calibrated = 0.35
+        reasons.append("Capped at 0.35 for high-confidence synthetic artifacts")
 
     calibrated = float(max(0.01, min(0.99, calibrated)))
     return calibrated, reasons

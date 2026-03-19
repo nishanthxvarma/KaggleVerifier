@@ -20,10 +20,28 @@ def render_metric_card(title: str, value: str, trend: str = None, color: str = "
     """, unsafe_allow_html=True)
 
 
+def render_verdict_badge(prob: float):
+    """Big high-contrast verdict badge: Authentic vs Fake."""
+    if prob > 0.75:
+        label, color, bg = "VERIFIED AUTHENTIC", "#10B981", "rgba(16, 185, 129, 0.15)"
+    elif prob > 0.60:
+        label, color, bg = "LIKELY AUTHENTIC", "#34D399", "rgba(52, 211, 153, 0.1)"
+    elif prob > 0.40:
+        label, color, bg = "SUSPICIOUS / UNCERTAIN", "#F59E0B", "rgba(245, 158, 11, 0.1)"
+    else:
+        label, color, bg = "FAKE / SYNTHETIC / TAMPERED", "#EF4444", "rgba(239, 68, 68, 0.15)"
+    
+    st.markdown(f"""
+    <div style="text-align: center; padding: 20px; border-radius: 12px; border: 2px solid {color}; background: {bg}; margin-bottom: 25px;">
+        <div style="font-size: 0.85rem; color: #94A3B8; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 5px;">Final Verdict</div>
+        <div style="font-size: 1.8rem; font-weight: 800; color: {color};">{label}</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+
 def render_dataset_type_badge(context: dict):
     """Renders a coloured badge showing auto-detected dataset domain."""
     dtype = context.get("dataset_type", "tabular")
-    ts    = context.get("is_timeseries", False)
     col   = context.get("ts_column")
 
     badge_map = {
@@ -32,7 +50,7 @@ def render_dataset_type_badge(context: dict):
         "tabular":     ("📊", "Standard Tabular Data",              "#10B981", "#064E3B"),
     }
     icon, label, fg, bg = badge_map.get(dtype, badge_map["tabular"])
-    col_hint = f"  ·  Timestamp column: <b>{col}</b>" if col else ""
+    col_hint = f"  ·  Timestamp: <b>{col}</b>" if col else ""
 
     st.markdown(f"""
     <div style="display:inline-block; background:{bg}; border:1px solid {fg};
@@ -88,8 +106,7 @@ def render_probability_gauge(prob: float, ci_lower: float = None, ci_upper: floa
 
 def render_explanation_panel(feats: dict):
     """
-    Rule-based natural-language explanation of the verdict.
-    Generates contextual sentences from the feature dict.
+    Richer NL explanation panel for v3 deep insights.
     """
     context  = feats.get("context_flags", {})
     dtype    = context.get("dataset_type", "tabular")
@@ -97,69 +114,54 @@ def render_explanation_panel(feats: dict):
     reasons  = context.get("calibration_reasons", [])
     raw      = context.get("raw_score", None)
 
-    lines = []
-
-    # Domain line
-    if dtype == "sensor_iot":
-        lines.append("🔬 **Sensor/IoT dataset** path selected — temporal and signal-continuity tests applied.")
-    elif dtype == "timeseries":
-        lines.append("⏱️ **Time-series dataset** path selected — autocorrelation and stationarity tests applied.")
-    else:
-        lines.append("📊 **Standard tabular** analysis applied.")
-
-    # Key evidence lines
-    lag1 = feats.get("mean_autocorr_lag1", 0.0)
-    if lag1 > 0.3 and is_ts:
-        lines.append(f"✅ Strong temporal memory detected (autocorr lag-1 = **{lag1:.2f}**), consistent with real sensor readings.")
-
-    adf = feats.get("adf_p_value", 0.5)
-    if is_ts and adf < 0.05:
-        lines.append(f"✅ Signal is stationary (ADF p-value = **{adf:.4f}**) — common in calibrated sensors.")
-
-    perm_e = feats.get("mean_permutation_entropy", 0.5)
-    if perm_e > 0.7:
-        lines.append(f"✅ High permutation entropy (**{perm_e:.2f}**) → complex natural disorder, not synthetic regularity.")
-    elif perm_e < 0.35:
-        lines.append(f"⚠️ Low permutation entropy (**{perm_e:.2f}**) → sequence may be too regular — possible generator artifact.")
-
-    miss = feats.get("missing_pct", 0.0)
-    if 0.005 < miss < 0.15:
-        lines.append(f"✅ Natural missingness ({miss:.1%}) randomly distributed — typical of real-world collection processes.")
-
-    dup = feats.get("duplicate_pct", 0.0)
-    if dup > 0.3:
-        lines.append(f"⚠️ High duplicate row rate ({dup:.0%}) — may indicate synthetic inflation or cheap data scraping.")
-
-    benford = feats.get("benfords_law_mae", None)
-    bypassed = context.get("benford_bypassed", True)
-    if not bypassed and benford is not None:
-        if benford < 0.04:
-            lines.append(f"✅ First-digit distribution follows Benford's Law closely (MAE = **{benford:.4f}**).")
-        elif benford > 0.10:
-            lines.append(f"⚠️ Significant Benford's deviation (MAE = **{benford:.4f}**) — unusual for natural numeric data.")
-    elif bypassed:
-        lines.append("ℹ️ Benford's Law check skipped — bounded/sensor columns detected (inapplicable domain).")
-
-    spikes = feats.get("spike_fraction", 0.0)
-    if is_ts and 0.005 < spikes < 0.10:
-        lines.append(f"✅ Natural spike pattern ({spikes:.1%} of readings) — consistent with real sensor anomalies.")
-
-    # Calibration reasons
-    if reasons:
-        lines.append("")
-        lines.append("**Score adjustments applied:**")
-        for r in reasons:
-            lines.append(f"- {r}")
-
-    if raw is not None:
-        lines.append(f"\n_Raw ensemble score before calibration: **{raw*100:.1f}%**_")
-
-    with st.expander("🧠 AI Explanation & Evidence", expanded=True):
-        for line in lines:
-            if line == "":
-                st.markdown("---")
+    with st.expander("📝 Deep Analysis & Evidence", expanded=True):
+        st.markdown(f"#### Why this verdict?")
+        
+        # Primary Indicators
+        cols = st.columns(2)
+        
+        # Tabular Insights
+        with cols[0]:
+            ks = feats.get("uniform_ks_stat", 0.5)
+            recon = feats.get("reconstruction_error", 0.5)
+            st.write("**Tabular Structure**")
+            if ks > 0.2:
+                st.write(f"✅ Natural value distribution (KS={ks:.2f})")
             else:
-                st.markdown(line)
+                st.write(f"⚠️ Unusually uniform distribution (KS={ks:.2f})")
+            
+            if recon < 0.15:
+                st.write(f"✅ Strong manifold fit (recon={recon:.3f})")
+            else:
+                st.write(f"⚠️ High reconstruction error (recon={recon:.3f})")
+
+        # Temporal/Pattern Insights
+        with cols[1]:
+            st.write("**Data Regularity**")
+            grid = feats.get("grid_density_score", 0.5)
+            perm = feats.get("mean_permutation_entropy", 0.5)
+            if grid > 0.3:
+                st.write(f"✅ Natural value spacing (grid={grid:.2f})")
+            else:
+                st.write(f"⚠️ Perfect grid spacing detected (grid={grid:.2f})")
+            
+            if perm > 0.6:
+                st.write(f"✅ Complex pattern (entropy={perm:.2f})")
+            else:
+                st.write(f"⚠️ High sequence regularity (entropy={perm:.2f})")
+
+        st.markdown("---")
+        
+        # Calibration Reasons (Top 3 prioritized)
+        if reasons:
+            st.write("**Key Signals Detected:**")
+            for r in reasons[:3]:
+                st.markdown(f"- {r}")
+
+        if raw is not None:
+            st.markdown(f"<div style='font-size:0.75rem; color:#64748B; margin-top:20px;'>"
+                        f"Technical: Ensemble v3 Raw Probability: {raw*100:.1f}%</div>", 
+                        unsafe_allow_html=True)
 
 
 def plot_benfords_law(actual: list, expected: list, digits: list):

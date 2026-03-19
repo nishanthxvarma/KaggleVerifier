@@ -14,6 +14,8 @@ import re
 import math
 from collections import Counter
 from sklearn.ensemble import IsolationForest
+from sklearn.decomposition import PCA
+from sklearn.preprocessing import StandardScaler
 import warnings
 
 warnings.filterwarnings("ignore")
@@ -46,8 +48,11 @@ def _safe(v, default=0.0):
         return default
 
 
-def _shannon_entropy(series: pd.Series) -> float:
-    counts = series.value_counts(normalize=True)
+def _shannon_entropy(series: pd.Series, sample: int = 5000) -> float:
+    s = series.dropna()
+    if len(s) > sample:
+        s = s.sample(n=sample, random_state=42)
+    counts = s.value_counts(normalize=True)
     return float(-np.sum(counts * np.log2(counts + 1e-9)))
 
 
@@ -74,11 +79,12 @@ def _near_duplicate_ratio(df: pd.DataFrame, sample: int = 2000) -> float:
         n = min(len(df), sample)
         sub = df.sample(n=n, random_state=42) if len(df) > sample else df.copy()
         num_cols = sub.select_dtypes(include=[np.number]).columns
+        if num_cols.empty:
+            return 0.0
         simplified = sub.copy()
         for c in num_cols:
             col_data = simplified[c].dropna()
             if len(col_data) > 0 and col_data.std() > 1e-10:
-                # Round to 2 decimal places of normalized values
                 mn, mx = col_data.min(), col_data.max()
                 simplified[c] = ((simplified[c] - mn) / (mx - mn + 1e-10) * 50).round(0)
         return float(simplified.duplicated().mean())
@@ -106,6 +112,19 @@ def _permutation_entropy_fast(series: pd.Series, order: int = 3) -> float:
         return 0.5
 
 
+def _calc_grid_density(series: pd.Series) -> float:
+    """Detects if values are locked to a perfect grid (synthetic artifact)."""
+    try:
+        vals = series.dropna().unique()
+        if len(vals) < 10: return 0.0
+        diffs = np.diff(np.sort(vals))
+        if len(diffs) < 5: return 0.0
+        # If diffs are extremely consistent, it's a grid
+        return float(np.std(diffs) / (np.mean(diffs) + 1e-9))
+    except Exception:
+        return 0.5
+
+
 # ──────────────────────────────────────────────────────────────────
 # MAIN FEATURE EXTRACTOR
 # ──────────────────────────────────────────────────────────────────
@@ -118,9 +137,14 @@ def extract_features(df: pd.DataFrame) -> dict:
     if df is None or df.empty:
         return {}
 
-    num_df = df.select_dtypes(include=[np.number])
-    cat_df = df.select_dtypes(exclude=[np.number])
+    # Adaptive Sampling for Speed & Robustness
     n_rows, n_cols = df.shape
+    sample_df = df
+    if n_rows > 50000:
+        sample_df = df.sample(n=50000, random_state=42)
+    
+    num_df = sample_df.select_dtypes(include=[np.number])
+    cat_df = sample_df.select_dtypes(exclude=[np.number])
 
     if n_rows == 0 or n_cols == 0:
         return {}
@@ -141,15 +165,15 @@ def extract_features(df: pd.DataFrame) -> dict:
     context_flags["ts_column"]     = type_info.get("ts_column", None)
 
     # ── 2. Exact duplicates ─────────────────────────────────────────
-    raw_dup_pct = float(df.duplicated().mean())
+    raw_dup_pct = float(sample_df.duplicated().mean())
 
     # ── 3. Near-duplicates ─────────────────────────────────────────
-    features["near_duplicate_ratio"] = _near_duplicate_ratio(df)
+    features["near_duplicate_ratio"] = _near_duplicate_ratio(sample_df)
 
     # ── 4. Missing ─────────────────────────────────────────────────
     features["missing_pct"]       = _safe(df.isna().mean().mean())
-    row_miss = df.isna().sum(axis=1) / n_cols
-    features["missing_variance"]  = _safe(row_miss.var() if n_rows > 1 else 0.0)
+    row_miss = sample_df.isna().sum(axis=1) / n_cols
+    features["missing_variance"]  = _safe(row_miss.var() if len(sample_df) > 1 else 0.0)
 
     # ── 5. Column sanity ────────────────────────────────────────────
     suspicious_cols = sum(
@@ -159,13 +183,14 @@ def extract_features(df: pd.DataFrame) -> dict:
     features["col_sanity_score"] = suspicious_cols / n_cols if n_cols else 0.0
 
     # ── 6. Cardinality ─────────────────────────────────────────────
-    card_pcts = [df[c].nunique() / n_rows for c in df.columns]
+    card_pcts = [sample_df[c].nunique() / len(sample_df) for c in df.columns]
     features["mean_cardinality"] = _safe(np.mean(card_pcts))
 
     # ── 7. Rounded numbers ratio ────────────────────────────────────
     total_nums = 0
     rounded_nums = 0
     narrow_range_cols = 0
+    grid_scores = []
 
     if not num_df.empty:
         for c in num_df.columns:
@@ -176,8 +201,10 @@ def extract_features(df: pd.DataFrame) -> dict:
                 narrow_range_cols += 1
             total_nums += len(vals)
             rounded_nums += int(np.sum((vals % 1 == 0)))
+            grid_scores.append(_calc_grid_density(num_df[c]))
 
         raw_rounded = rounded_nums / total_nums if total_nums else 0.0
+        features["grid_density_score"] = _safe(np.mean(grid_scores) if grid_scores else 0.5)
 
         if not num_df.empty and narrow_range_cols / len(num_df.columns) > 0.5:
             features["rounded_num_ratio"] = raw_rounded * 0.5
@@ -187,6 +214,7 @@ def extract_features(df: pd.DataFrame) -> dict:
             context_flags["narrow_numeric_range"] = False
     else:
         features["rounded_num_ratio"] = 0.0
+        features["grid_density_score"] = 0.5
         context_flags["narrow_numeric_range"] = False
 
     # ── 8. Integer column ratio ─────────────────────────────────────
@@ -205,9 +233,11 @@ def extract_features(df: pd.DataFrame) -> dict:
             if len(vals) > 3:
                 skew_vals.append(vals.skew())
                 kurt_vals.append(vals.kurtosis())
-                scaled = (vals - vals.min()) / (vals.max() - vals.min() + 1e-9)
-                d, _ = stats.kstest(scaled, "uniform")
-                ks_vals.append(d)
+                vmin, vmax = vals.min(), vals.max()
+                if vmax > vmin:
+                    scaled = (vals - vmin) / (vmax - vmin)
+                    d, _ = stats.kstest(scaled, "uniform")
+                    ks_vals.append(d)
 
     features["mean_skewness"]     = _safe(np.nanmean(skew_vals) if skew_vals else 0.0)
     features["mean_kurtosis"]     = _safe(np.nanmean(kurt_vals) if kurt_vals else 0.0)
@@ -216,7 +246,7 @@ def extract_features(df: pd.DataFrame) -> dict:
     # ── 10. Shapiro-Wilk normality (sample) ────────────────────────
     sw_pvals = []
     if not num_df.empty:
-        for c in num_df.columns[:6]:
+        for c in num_df.columns[:8]:
             s = num_df[c].dropna()
             samp = s.sample(min(len(s), 300), random_state=42) if len(s) > 300 else s
             if len(samp) >= 8:
@@ -227,13 +257,22 @@ def extract_features(df: pd.DataFrame) -> dict:
                     pass
     features["mean_shapiro_pval"] = _safe(np.nanmean(sw_pvals) if sw_pvals else 0.5)
 
-    # ── 11. Correlation structure ─────────────────────────────────
+    # ── 11. Correlation structure & Consistency ───────────────────
     if num_df.shape[1] > 1:
-        corr = num_df.corr().abs().values
-        upper = corr[np.triu_indices_from(corr, k=1)]
+        corr_matrix = num_df.corr().fillna(0)
+        corr_vals = corr_matrix.abs().values
+        upper = corr_vals[np.triu_indices_from(corr_vals, k=1)]
         features["mean_abs_correlation"] = _safe(np.nanmean(upper) if len(upper) else 0.0)
+        
+        # Joint Consistency: check if correlations are preserved after a small row shuffle
+        # (Synthetic data often has brittle dependencies that collapse or are too 'perfectly independent')
+        shuffled_num = num_df.apply(lambda x: x.sample(frac=1).values)
+        shuffled_corr = shuffled_num.corr().fillna(0).abs().values
+        s_upper = shuffled_corr[np.triu_indices_from(shuffled_corr, k=1)]
+        features["joint_correlation_consistency"] = _safe(np.mean(np.abs(upper - s_upper)))
     else:
         features["mean_abs_correlation"] = 0.0
+        features["joint_correlation_consistency"] = 0.0
 
     # ── 12. Benford's Law (smart – skip for sensors/bounded cols) ───
     is_sensor = type_info.get("dataset_type") == "sensor_iot"
@@ -242,24 +281,26 @@ def extract_features(df: pd.DataFrame) -> dict:
     if not num_df.empty and not is_sensor:
         for c in num_df.columns:
             col_data = num_df[c].dropna()
-            col_range = col_data.max() - col_data.min() if len(col_data) > 0 else 0
-            if col_data.max() > 100 and col_range > 100 and col_data.var() > 10:
-                mae = _benford_mae(col_data)
-                if not math.isnan(mae):
-                    benford_maes.append(mae)
+            if len(col_data) > 30:
+                col_range = col_data.max() - col_data.min()
+                # Benford applies when range spans orders of magnitude
+                if col_data.max() > 10 and col_range > 10:
+                    mae = _benford_mae(col_data)
+                    if not math.isnan(mae):
+                        benford_maes.append(mae)
 
     features["benfords_law_mae"]         = _safe(np.mean(benford_maes) if benford_maes else 0.0)
     context_flags["benford_bypassed"]    = len(benford_maes) == 0
     features["benford_applicable_cols"]  = len(benford_maes)
 
     # ── 13. Shannon Entropy ─────────────────────────────────────────
-    entropies = [_shannon_entropy(df[c]) for c in df.columns]
+    entropies = [_shannon_entropy(sample_df[c]) for c in sample_df.columns[:15]]
     features["mean_entropy"] = _safe(np.mean(entropies) if entropies else 0.0)
 
     # ── 14. Permutation Entropy (regularity test) ──────────────────
     pe_vals = []
     if not num_df.empty:
-        for c in list(num_df.columns[:6]):
+        for c in list(num_df.columns[:10]):
             s = num_df[c].dropna()
             if len(s) >= 8:
                 pe_vals.append(_permutation_entropy_fast(s))
@@ -276,25 +317,35 @@ def extract_features(df: pd.DataFrame) -> dict:
     # ── 16. Outlier fraction (Isolation Forest) ───────────────────
     if not num_df.empty and len(num_df) > 10:
         num_filled   = num_df.fillna(num_df.mean())
-        sample_size  = min(len(num_filled), 1000)
-        sample       = num_filled.sample(n=sample_size, random_state=42)
+        
+        # Isolation Forest outlier score
         iso          = IsolationForest(contamination=0.05, random_state=42)
-        preds        = iso.fit_predict(sample)
+        preds        = iso.fit_predict(num_filled)
         features["outlier_fraction"] = _safe(float(np.mean(preds == -1)))
+        
+        # PCA Reconstruction Error (Autoencoder proxy for manifold realism)
+        try:
+            scaler = StandardScaler()
+            scaled_data = scaler.fit_transform(num_filled)
+            pca = PCA(n_components=min(len(num_df.columns), 5), random_state=42)
+            X_reduced = pca.fit_transform(scaled_data)
+            X_reconstructed = pca.inverse_transform(X_reduced)
+            recon_error = np.mean(np.square(scaled_data - X_reconstructed))
+            features["reconstruction_error"] = _safe(recon_error)
+        except Exception:
+            features["reconstruction_error"] = 0.5
     else:
         features["outlier_fraction"] = 0.0
+        features["reconstruction_error"] = 0.5
 
     # ── 17. Text / string variance ────────────────────────────────
     str_vars = []
     if not cat_df.empty:
-        for c in cat_df.columns:
+        for c in cat_df.columns[:5]:
             lens = cat_df[c].dropna().astype(str).str.len()
             if len(lens) > 0:
                 str_vars.append(float(lens.var()))
     features["mean_string_len_variance"] = _safe(np.nanmean(str_vars) if str_vars else 0.0)
-
-    # ── 18. Near-duplicate ratio (already set above in step 3) ────
-    # (already in features dict)
 
     # ── 19. Value range diversity ─────────────────────────────────
     if not num_df.empty:
@@ -314,10 +365,9 @@ def extract_features(df: pd.DataFrame) -> dict:
         try:
             ts_feats = extract_timeseries_features(df, type_info)
             features.update(ts_feats)
-        except Exception as e:
-            # Fall back to neutral values
+        except Exception:
             for key in [
-                "is_timeseries", "is_sensor_iot", "adf_p_value", "kpss_p_value",
+                "is_sensor_iot", "adf_p_value", "kpss_p_value",
                 "mean_autocorr_lag1", "mean_autocorr_lag5", "seasonality_strength",
                 "trend_slope", "residual_variance", "sequence_smoothness",
                 "spike_fraction", "noise_level_estimate", "value_jump_freq",
@@ -326,7 +376,6 @@ def extract_features(df: pd.DataFrame) -> dict:
                 features.setdefault(key, 0.5)
     else:
         # Non-time-series: fill TS features with neutral defaults
-        features.setdefault("is_timeseries",      0.0)
         features.setdefault("is_sensor_iot",      0.0)
         features.setdefault("adf_p_value",        0.5)
         features.setdefault("kpss_p_value",       0.05)

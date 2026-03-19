@@ -1,0 +1,43 @@
+﻿
+[Simulation] KaggleVerifier v2 - Score Simulation
+=======================================================
+Ensemble loaded from models/ensemble_v2.pkl
+[PIPELINE] Loaded ensemble v2 from disk.
+
+-------------------------------------------------------
+  Test 1: Noisy AR(1) Sensor with Timestamps
+-------------------------------------------------------
+  Score: 99.0%  (threshold: > 65%)  [PASS]
+  Context: {'dataset_type': 'sensor_iot', 'is_timeseries': True, 'ts_column': 'timestamp', 'narrow_numeric_range': True, 'benford_bypassed': True, 'clustered_observations': False, 'calibration_reasons': ['Natural sensor noise level detected (+0.15)', 'Stationary signal (ADF p=0.000) suggests real sensor (+0.10)', 'Strong temporal memory (autocorr lag-1=0.90) (+0.12)', 'Seasonality & residual variance suggest real cycles (+0.08)', 'Natural spike pattern in sensor data (9.9%) (+0.05)', 'High permutation entropy (0.98) -> natural complexity (+0.12)', 'Natural sparse missingness (3.0%) suggests authentic data (+0.05)', 'High Shannon entropy (9.92) -> authentic randomness (+0.05)'], 'raw_score': 0.8783, 'ci_lower': 0.507, 'ci_upper': 1.0}
+
+-------------------------------------------------------
+  Test 2: Multi-Sensor IoT (3 correlated channels)
+-------------------------------------------------------
+  Score: 99.0%  (threshold: > 60%)  [PASS]
+  Context: {'dataset_type': 'sensor_iot', 'is_timeseries': True, 'ts_column': 'timestamp', 'narrow_numeric_range': False, 'benford_bypassed': True, 'clustered_observations': False, 'calibration_reasons': ['Natural sensor noise level detected (+0.15)', 'Stationary signal (ADF p=0.000) suggests real sensor (+0.10)', 'Strong temporal memory (autocorr lag-1=0.87) (+0.12)', 'Seasonality & residual variance suggest real cycles (+0.08)', 'Natural spike pattern in sensor data (8.4%) (+0.05)', 'High permutation entropy (0.98) -> natural complexity (+0.12)', 'Natural sparse missingness (2.5%) suggests authentic data (+0.05)', 'High Shannon entropy (9.61) -> authentic randomness (+0.05)'], 'raw_score': 0.8756, 'ci_lower': 0.643, 'ci_upper': 0.955}
+
+-------------------------------------------------------
+  Test 3: Pure CTGAN-style Uniform Fake
+-------------------------------------------------------
+  Score: 55.0%  (threshold: < 40%)  [FAIL]
+
+-------------------------------------------------------
+  Test 4: Column-Shuffled Tabular Fake
+-------------------------------------------------------
+  Score: 55.0%  (threshold: < 45%)  [FAIL]
+
+-------------------------------------------------------
+  Test 5: Real sklearn Diabetes Dataset
+-------------------------------------------------------
+  Score: 82.2%  (threshold: > 55%)  [PASS]
+  Context: {'dataset_type': 'tabular', 'is_timeseries': False, 'ts_column': None, 'narrow_numeric_range': True, 'benford_bypassed': False, 'clustered_observations': False, 'calibration_reasons': ['High permutation entropy (0.96) -> natural complexity (+0.12)', 'Non-uniform distribution (KS=0.28) suggests real tabular (+0.10)', 'High Shannon entropy (5.78) -> authentic randomness (+0.05)'], 'raw_score': 0.5518, 'ci_lower': 0.143, 'ci_upper': 0.88}
+
+-------------------------------------------------------
+  Test 6: Perfect Grid Data (Synthetic Artifact)
+-------------------------------------------------------
+  Score: 60.0%  (threshold: < 40%)  [FAIL]
+
+=======================================================
+  RESULTS: 3/6 scenarios passed
+  Scores: sensor=99%, IoT=99%, uniform_fake=55%, shuffled=55%, diabetes=82%, grid=60%
+  [WARN] 3 scenario(s) did not meet thresholds.
