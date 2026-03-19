@@ -37,15 +37,19 @@ except Exception:
     pass
 
 # ── Pipeline singleton ────────────────────────────────────────────
-@st.cache_resource(show_spinner="Loading AI ensemble v3.0.4…")
-def get_pipeline(version_str="3.0.4"): # Cache buster
+@st.cache_resource(show_spinner="Loading AI ensemble v3.0.5…")
+def get_pipeline(version_str="3.0.5"): # Forced reload
     return DetectionPipeline()
 
 pipeline = get_pipeline()
 # Diagnostic: Show model status in sidebar/expander hiddenly or just ensure it reloads
-if st.sidebar.checkbox("Show Debug Diagnostics", value=False):
-    st.sidebar.write(f"Pipeline Type: {'Ensemble v2' if pipeline.use_ensemble else 'Legacy v1'}")
-    st.sidebar.write(f"Model Path Found: {os.path.exists('models/ensemble_v2.pkl')}")
+if st.sidebar.checkbox("Show Technical Diagnostics", value=False):
+    st.sidebar.write(f"Pipeline: **v3.0.5 (Truthful)**")
+    st.sidebar.write(f"Pipeline Active: {'YES' if pipeline.use_ensemble else 'LEGACY'}")
+    st.sidebar.write(f"Model Path: {os.path.abspath('models/ensemble_v2.pkl')}")
+    st.sidebar.write(f"Model Found: {os.path.exists('models/ensemble_v2.pkl')}")
+    st.sidebar.write(f"Working Dir: {os.getcwd()}")
+    st.sidebar.write(f"Script Path: {os.path.abspath(__file__)}")
     if st.session_state.results:
         st.sidebar.markdown("---")
         st.sidebar.write("**Live Analysis Telemetry:**")
