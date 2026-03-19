@@ -46,6 +46,20 @@ pipeline = get_pipeline()
 if st.sidebar.checkbox("Show Debug Diagnostics", value=False):
     st.sidebar.write(f"Pipeline Type: {'Ensemble v2' if pipeline.use_ensemble else 'Legacy v1'}")
     st.sidebar.write(f"Model Path Found: {os.path.exists('models/ensemble_v2.pkl')}")
+    if st.session_state.results:
+        st.sidebar.markdown("---")
+        st.sidebar.write("**Live Analysis Telemetry:**")
+        f = st.session_state.results["feats"]
+        c = f.get("context_flags", {})
+        st.sidebar.json({
+            "is_ts": c.get("is_timeseries"),
+            "dtype": c.get("dataset_type"),
+            "ks_stat": f.get("uniform_ks_stat"),
+            "entropy": f.get("mean_entropy"),
+            "recon_err": f.get("reconstruction_error"),
+            "grid": f.get("grid_density_score"),
+            "raw_prob": c.get("raw_score")
+        })
 
 
 # ── Header ────────────────────────────────────────────────────────
