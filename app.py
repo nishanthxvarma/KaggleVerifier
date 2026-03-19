@@ -37,8 +37,8 @@ except Exception:
     pass
 
 # ── Pipeline singleton ────────────────────────────────────────────
-@st.cache_resource(show_spinner="Loading AI ensemble v3…")
-def get_pipeline(version_str="3.0.1"): # Cache buster
+@st.cache_resource(show_spinner="Loading AI ensemble v3.0.4…")
+def get_pipeline(version_str="3.0.4"): # Cache buster
     return DetectionPipeline()
 
 pipeline = get_pipeline()
