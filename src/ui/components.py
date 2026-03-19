@@ -152,10 +152,10 @@ def render_explanation_panel(feats: dict):
 
         st.markdown("---")
         
-        # Calibration Reasons (Top 3 prioritized)
+        # Calibration Reasons (All v3 rules listed)
         if reasons:
-            st.write("**Key Signals Detected:**")
-            for r in reasons[:3]:
+            st.write("**Calibration Signals:**")
+            for r in reasons:
                 st.markdown(f"- {r}")
 
         if raw is not None:
@@ -258,6 +258,6 @@ def render_timeseries_stats_table(feats: dict):
 def render_footer():
     st.markdown("""
     <div class="custom-footer">
-        <b>KaggleVerifier v2</b> · Ensemble + Domain-Adaptive Authenticity Detection
+        <b>KaggleVerifier v3</b> · Truthful Detector · Deep Manifold Analytics
     </div>
     """, unsafe_allow_html=True)
