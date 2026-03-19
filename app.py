@@ -37,11 +37,16 @@ except Exception:
     pass
 
 # ── Pipeline singleton ────────────────────────────────────────────
-@st.cache_resource(show_spinner="Loading AI ensemble…")
-def get_pipeline():
+@st.cache_resource(show_spinner="Loading AI ensemble v3…")
+def get_pipeline(version_str="3.0.1"): # Cache buster
     return DetectionPipeline()
 
 pipeline = get_pipeline()
+# Diagnostic: Show model status in sidebar/expander hiddenly or just ensure it reloads
+if st.sidebar.checkbox("Show Debug Diagnostics", value=False):
+    st.sidebar.write(f"Pipeline Type: {'Ensemble v2' if pipeline.use_ensemble else 'Legacy v1'}")
+    st.sidebar.write(f"Model Path Found: {os.path.exists('models/ensemble_v2.pkl')}")
+
 
 # ── Header ────────────────────────────────────────────────────────
 st.markdown(

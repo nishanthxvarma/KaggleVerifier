@@ -127,6 +127,11 @@ class DetectionPipeline:
                  model_path_v2: str = "models/ensemble_v2.pkl",
                  model_path_v1: str = "models/meta_classifier.pkl"):
 
+        # Ensure we use absolute project paths relative to this file
+        _root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        model_path_v2 = os.path.join(_root, model_path_v2) 
+        model_path_v1 = os.path.join(_root, model_path_v1)
+
         self.classifier     = None
         self.use_ensemble   = False
         self._ci_lower      = None
