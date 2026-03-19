@@ -1,106 +1,161 @@
-# KaggleVerifier – Detect Fake/Synthetic Datasets 🔎
+# KaggleVerifier v2
 
-**KaggleVerifier** is an advanced AI-powered web application built to detect whether a Kaggle dataset (or any uploaded CSV) is authentic/real data or synthetically generated/manipulated.
+**AI-Powered, Ensemble-Based, Domain-Adaptive Dataset Authenticity Detector**
 
-Designed with a premium fintech-inspired dark mode UI, this tool extracts over 20 advanced statistical, distributional, and machine learning features to assess data integrity. It ultimately uses an XGBoost meta-classifier to provide a binary verdict and a confidence score.
-
-**Final Year Project 2026**  
-**Developed by:** Nishanth
+KaggleVerifier v2 determines whether a tabular CSV dataset is genuinely real-world data or synthetically generated / manipulated — with specialized intelligence for sensor, IoT, and time-series data.
 
 ---
 
-## 🚀 Key Features
+## 🆕 What's New in v2
 
-* **Multi-Layered Analysis:** Evaluates 20+ features, including:
-  * **Statistical Anomalies:** Duplicate row clustering, missing value variance, cardinality scores, rounded numbers ratios.
-  * **Adaptive Context Rules:** Intelligently bypasses penalties for natural data patterns (e.g., permits high duplicates if data shows high entropy indicative of clustered sensor/biology measurements, or forgives Benford's deviation on narrow range survey metrics).
-  * **Distribution Checks:** Skewness, Kurtosis, Correlation heatmap consistency.
-  * **Advanced Checks:** Benford's Law Mean Absolute Error (MAE), Shannon Entropy, and Isolation Forest Outlier Fractions.
-* **XGBoost Meta-Classifier:** A high-speed, scalable model dynamically trained on robust synthetically-corrupted real-world tabular data.
-* **Sleek Glassmorphism UI:** Built gracefully with Streamlit, Plotly, custom CSS and dark mode defaults.
-* **Universal Input:** Extract massive tables directly from Kaggle URLs securely or via CSV file upload.
-
----
-
-## 🛠 Tech Stack
-
-* **Frontend:** Streamlit, Custom HTML/CSS
-* **Backend Pipeline:** Python, pandas, numpy, scipy
-* **Machine Learning:** scikit-learn (IsolationForest), XGBoost
-* **Visuals:** Plotly
+| Feature | v1 | v2 |
+|---|---|---|
+| Classifier | Single XGBoost | **XGBoost + RandomForest + IsoForest stacked ensemble** |
+| Time-series awareness | ❌ | ✅ Auto-detected, specialized scoring path |
+| Sensor/IoT detection | ❌ | ✅ AR(1), autocorrelation, ADF stationarity |
+| Feature count | 15 | **30+** |
+| Benford's Law | Always applied | ✅ Skipped automatically for bounded sensor domains |
+| Post-calibration | Sigmoid only | ✅ **8 domain-aware rules** |
+| Explainability | Basic tooltips | ✅ **Natural-language explanation panel** |
+| Confidence interval | ❌ | ✅ Cross-model variance CI |
+| Training diversity | 5 sklearn + shuffled | **130+ real datasets (sensor + tabular + IoT)** |
+| Fake generator types | 7 | **10 (+ CTGAN-style marginal, perfect grid, block-missing)** |
+| Test coverage | 2 files | **5 test files + end-to-end simulation** |
 
 ---
 
-## 📦 Installation & Setup
+## 🏗️ Architecture
 
-1. **Clone/Navigate to Project Folder:**
-   ```bash
-   cd KaggleVerifier
-   ```
-
-2. **Install Dependencies:**
-   Ensure you have Python 3.10+ installed.
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-3. **Configure Kaggle API (Optional):**
-   To download directly from Kaggle URL, ensure you have exported your API variables or have a `kaggle.json` set up.
-   ```bash
-   export KAGGLE_USERNAME="your-username"
-   export KAGGLE_KEY="your-api-key"
-   ```
-
-4. **Bootstrap Initial ML Model:**
-   The app uses an accurate XGBoost meta-classifier that must be trained offline first. Execute:
-   ```bash
-   python src/ml/train_real.py
-   ```
-   *(This downloads standard tabular real-world datasets from Scikit-Learn, generates complex synthetic aberrations (duplication, uniform noise), and trains `models/meta_classifier.pkl` instantly with >90% validation accuracy)*
+```
+Upload CSV
+     │
+     ▼
+Feature Extraction (features.py, timeseries_detector.py)
+     │
+     ├── Domain detection: tabular / time-series / sensor_iot
+     ├── 30+ statistical + temporal features
+     │   ├── Standard: entropy, skewness, kurtosis, Benford's, IsoForest
+     │   └── Temporal: ADF/KPSS, autocorrelation, STL, permutation entropy,
+     │                 Higuchi FD, spike fraction, noise level
+     │
+     ▼
+Ensemble v2 (ensemble.py)
+     │
+     ├── XGBClassifier  ──┐
+     ├── RandomForest   ──┼──► Meta LogisticRegression (calibrated)
+     └── IsoForest      ──┘
+                             │
+                             ▼
+                       Raw score [0..1]
+                             │
+                             ▼
+     Domain-Adaptive Calibration (pipeline.py)
+     │
+     ├── BOOST: sensor noise, ADF stationarity, autocorrelation memory,
+     │          seasonality, natural missingness, clustered observations
+     └── PENALTY: low permutation entropy, near-uniform distributions,
+                  high near-duplicates, suspiciously perfect data
+                             │
+                             ▼
+                   Final Authenticity Score
+```
 
 ---
 
-## 🏃‍♂️ Running the Application
+## 🎯 Accuracy Targets
 
-Execute the Streamlit application:
+| Dataset Type | Expected Score |
+|---|---|
+| Real sensor/IoT (natural noise + timestamps) | **80 – 95%** |
+| Real tabular (UCI, sklearn, survey data) | **65 – 90%** |
+| Pure CTGAN/uniform synthetic | **< 35%** |
+| Column-shuffled or perfectly gridded fake | **< 40%** |
+
+---
+
+## 🚀 Quick Start
+
+### Installation
+
+```bash
+pip install -r requirements.txt
+```
+
+### Run the App
+
 ```bash
 streamlit run app.py
 ```
-This will launch a local server typically at `http://localhost:8501`.
 
----
+On first launch, the system will automatically train the ensemble (takes ~90-120 seconds). Subsequent runs load the saved model from `models/ensemble_v2.pkl`.
 
-## 🧪 Testing
-
-The codebase includes `pytest` integration. To verify core extraction logic features:
+### Run Tests
 
 ```bash
-pytest tests/
+# All unit tests
+python -m pytest tests/ -v
+
+# End-to-end score simulation (shows accuracy on 6 dataset types)
+python tests/simulate_scores.py
+```
+
+### Retrain Model
+
+```bash
+python src/ml/train_real.py
 ```
 
 ---
 
-## ☁️ Deployment Guide
+## 📁 Project Structure
 
-KaggleVerifier is fully portable and stateless, making it incredibly easy to deploy completely free on cloud providers:
-
-### Render.com or Railway
-1. Push this repository to GitHub.
-2. Link the repository to Render/Railway as a "Web Service".
-3. Start Command: `streamlit run app.py --server.port $PORT --server.address 0.0.0.0`
-4. Add environment variables: `KAGGLE_USERNAME` and `KAGGLE_KEY` if using the URL fetcher.
-
-### Streamlit Community Cloud
-1. Push repository to GitHub.
-2. Sign in to share.streamlit.io.
-3. Deploy new app, select `app.py`.
-4. In **Advanced Settings**, safely add your API keys.
+```
+KaggleVerifier/
+├── app.py                         # Streamlit UI (v2)
+├── requirements.txt
+├── models/
+│   ├── ensemble_v2.pkl            # Stacked ensemble (XGB + RF + IsoForest)
+│   └── training_report.json       # OOF AUC + class balance report
+├── src/
+│   ├── core/
+│   │   ├── pipeline.py            # Orchestration + calibration rules
+│   │   └── kaggle_api.py          # File/URL ingest
+│   ├── ml/
+│   │   ├── features.py            # 30+ feature extractor
+│   │   ├── timeseries_detector.py # Time-series / sensor domain detection
+│   │   ├── ensemble.py            # Stacked ensemble model
+│   │   ├── train_real.py          # Training pipeline
+│   │   └── generator.py           # Synthetic data augmentation
+│   └── ui/
+│       ├── components.py          # UI widgets (badge, gauge, ACF, NL panel)
+│       └── style.css
+├── tests/
+│   ├── test_features.py           # Feature extractor tests
+│   ├── test_ensemble.py           # Ensemble model tests
+│   ├── test_calibration.py        # Calibration rule tests
+│   ├── test_model.py              # Legacy classifier tests
+│   └── simulate_scores.py         # End-to-end accuracy simulation
+└── data/
+    ├── real/                      # Drop extra real CSVs here for training
+    └── synthetic/
+```
 
 ---
 
-### Limitations & Future Work
-* Maximum local file size capped around 10MB/50k rows due to expensive Isolation Forest calculations.
-* Complex text-heavy NLP datasets require heavier transformer models (e.g., `sentence-transformers`) which were omitted here to maintain pure local CPU runtime.
+## 🧠 Domain Detection Logic
 
---- 
-*Built with ❤️ for data integrity.*
+The system automatically identifies dataset type before scoring:
+
+1. **Sensor/IoT** – timestamp column detected + monotone time index + lag-1 autocorrelation > 0.3
+2. **Time-series** – timestamp column present or very high autocorrelation without timestamp
+3. **Standard tabular** – everything else
+
+Once the domain is identified:
+- Sensor path: applies ADF/KPSS stationarity, STL decomposition, permutation entropy, Higuchi fractal dimension, spike analysis
+- Tabular path: applies enhanced Benford's Law, Shapiro-Wilk normality, uniform KS test, correlation structure
+
+---
+
+## 📄 License
+
+MIT License — for academic final-year project use.
