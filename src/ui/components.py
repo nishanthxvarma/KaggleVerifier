@@ -9,13 +9,13 @@ import numpy as np
 # Core UI Helpers
 # ──────────────────────────────────────────────────────────────────
 
-def render_metric_card(title: str, value: str, trend: str = None, color: str = "#00FFFF"):
-    """Sleek obsidian metric block with gold highlight."""
+def render_metric_card(title: str, value: str, trend: str = None, color: str = "#22D3EE"):
+    """Sleek obsidian metric block with aqua highlight."""
     st.markdown(f"""
     <div class="glass-container">
         <div style="font-size: 0.8rem; color: #94A3B8; text-transform: uppercase; letter-spacing: 0.1em; font-family: 'Inter';">{title}</div>
-        <div style="font-size: 2.2rem; font-weight: 700; color: {color}; margin: 8px 0; font-family: 'JetBrains Mono';">{value}</div>
-        {f'<div style="font-size: 0.8rem; color: #FFD700; opacity: 0.8;">{trend}</div>' if trend else ''}
+        <div style="font-size: 2.22rem; font-weight: 700; color: {color}; margin: 8px 0; font-family: 'JetBrains Mono';">{value}</div>
+        {f'<div style="font-size: 0.8rem; color: #38BDF8; opacity: 0.8;">{trend}</div>' if trend else ''}
     </div>
     """, unsafe_allow_html=True)
 
@@ -25,9 +25,9 @@ def render_verdict_badge(prob: float):
     if prob > 0.75:
         label, color, bg = "VERIFIED AUTHENTIC", "#00FFFF", "rgba(0, 255, 255, 0.05)"
     elif prob > 0.60:
-        label, color, bg = "PROBABLE AUTHENTICITY", "#34D399", "rgba(52, 211, 153, 0.05)"
+        label, color, bg = "PROBABLE AUTHENTICITY", "#22D3EE", "rgba(34, 211, 238, 0.05)"
     elif prob > 0.40:
-        label, color, bg = "SIGNALS UNCERTAIN", "#FFD700", "rgba(255, 215, 0, 0.05)"
+        label, color, bg = "SIGNALS UNCERTAIN", "#94A3B8", "rgba(148, 163, 184, 0.05)"
     else:
         label, color, bg = "SYNTHETIC ARTIFACT DETECTED", "#EF4444", "rgba(239, 68, 68, 0.08)"
     
@@ -45,8 +45,8 @@ def render_dataset_type_badge(context: dict):
     col   = context.get("ts_column")
 
     badge_map = {
-        "sensor_iot":  ("📡", "Sensor Domain Verified",  "#00FFFF", "rgba(0, 255, 255, 0.05)"),
-        "timeseries":  ("⏱️", "Sequential Intel Detected", "#FFD700", "rgba(255, 215, 0, 0.05)"),
+        "sensor_iot":  ("📡", "Verified Sensor Stream",  "#22D3EE", "rgba(34, 211, 238, 0.05)"),
+        "timeseries":  ("⏱️", "Sequential Analysis Active", "#38BDF8", "rgba(56, 189, 248, 0.05)"),
         "tabular":     ("📊", "Standard Tabular Matrix", "#F8FAFC", "rgba(255, 255, 255, 0.05)"),
     }
     icon, label, fg, bg = badge_map.get(dtype, badge_map["tabular"])
@@ -259,5 +259,9 @@ def render_footer():
     st.markdown("""
     <div class="custom-footer">
         <span>Data Verace</span> · Premium Data Intelligence · Built for Serious Analysts
+        <br>
+        <div style="font-size: 0.7rem; opacity: 0.6; margin-top: 8px; color: #64748B;">
+            AI can make mistakes. Verify critical results.
+        </div>
     </div>
     """, unsafe_allow_html=True)

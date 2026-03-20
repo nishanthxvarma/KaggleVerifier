@@ -69,7 +69,7 @@ if st.sidebar.checkbox("Show Technical Diagnostics", value=False):
 # ── Header ────────────────────────────────────────────────────────
 st.markdown(
     "<h1 style='text-align:center; font-size:4.5rem; margin-bottom:0;' class='logo-text'>"
-    "Data <span style='color:#00FFFF;'>Verace</span>"
+    "Data <span style='color:#22D3EE;'>Verace</span>"
     "</h1>",
     unsafe_allow_html=True,
 )
@@ -108,7 +108,6 @@ if not st.session_state.results:
         st.markdown('<div class="glass-container">', unsafe_allow_html=True)
         st.markdown("<h3 style='text-align:center; letter-spacing:0.05em;'>Ingest Dataset (CSV)</h3>", unsafe_allow_html=True)
         uploaded_file = st.file_uploader("", type=["csv"])
-        st.markdown("---")
         analyze_btn = st.button("EXECUTE ANALYSIS PIELINE", use_container_width=True)
         st.markdown("</div>", unsafe_allow_html=True)
 
@@ -130,8 +129,6 @@ else:
                 st.rerun()
             else:
                 st.warning("Please upload a CSV file.")
-
-    st.markdown("<hr style='border:1px solid #334155; margin:20px 0;'>", unsafe_allow_html=True)
 
     res   = st.session_state.results
     prob  = res["prob"]
@@ -174,9 +171,6 @@ else:
     # ── Explanation Panel ─────────────────────────────────────────
     render_explanation_panel(feats)
 
-    st.markdown("<hr style='border:1px solid #334155; margin:40px 0;'>", unsafe_allow_html=True)
-
-    # ── Metrics Cards ─────────────────────────────────────────────
     st.markdown("<h2>📊 Detailed ML Analytics</h2>", unsafe_allow_html=True)
 
     m1, m2, m3, m4 = st.columns(4)
