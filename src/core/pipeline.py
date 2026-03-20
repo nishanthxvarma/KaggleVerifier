@@ -77,46 +77,56 @@ def _calibrate(prob: float, feats: dict) -> Tuple[float, list]:
         boost += 0.15
         reasons.append("Small-dataset distribution grace (+0.15)")
 
-    # -- 2. SKEPTICAL FAKE PENALTIES (Fixes Titanic 1M Fake) --------
+    # -- 2. SKEPTICAL FAKE PENALTIES (Fixes Titanic / Uniform / Grid Fakes) --
 
-    # Grid Density Penalty
+    # Grid Density Penalty (Detects linspace/regular grids)
     grid_score = feats.get("grid_density_score", 0.5)
-    if grid_score < 0.20:
-        penalty += 0.50
-        reasons.append(f"Extreme grid regularity (score={grid_score:.3f}) -> synthetic (-0.50)")
+    if grid_score < 0.15:
+        penalty += 0.60
+        reasons.append(f"Synthetic Grid Artifact (density={grid_score:.3f}) (-0.60)")
 
-    # Joint Correlation Consistency
+    # Joint Correlation Consistency (FIXED: High collapse = REAL, Low collapse = Independent/Fake)
+    # If the dataset claims to be real but has zero internal dependencies, it's suspicious.
     joint_consist = feats.get("joint_correlation_consistency", 0.0)
-    if joint_consist > 0.40:
-        penalty += 0.40
-        reasons.append(f"Brittle dependencies detected (collapse={joint_consist:.2f}) (-0.40)")
+    mean_corr = feats.get("mean_abs_correlation", 0.0)
+    
+    # If correlations are already near zero, shuffling doesn't change anything (Low joint_consist).
+    # This is common in simple 'uniform' or 'marginal' fakes.
+    if joint_consist < 0.04 and mean_corr < 0.05 and dtype != "sensor_iot":
+        penalty += 0.45
+        reasons.append(f"Suspiciously Independent Columns (consist={joint_consist:.3f}) (-0.45)")
 
-    # Perfectly Uniform Marginals
-    if ks_stat < 0.03:
-        penalty += 0.50
-        reasons.append(f"Synthetic uniform distribution (KS={ks_stat:.3f}) (-0.50)")
+    # Perfectly Uniform Marginals (CTGAN/Uniform fakes)
+    if ks_stat < 0.04:
+        penalty += 0.65
+        reasons.append(f"Ultra-Uniform Marginals (KS={ks_stat:.3f}) -> synthetic (-0.65)")
 
-    # Sequence Regularity
+    # Sequence Regularity (Permutation Entropy)
     perm_e = feats.get("mean_permutation_entropy", 0.5)
-    if perm_e < 0.30:
-        penalty += 0.35
-        reasons.append(f"Unnatural sequence regularity (PE={perm_e:.2f}) (-0.35)")
+    if perm_e < 0.35:
+        penalty += 0.40
+        reasons.append(f"Unnatural Sequence Regularity (PE={perm_e:.2f}) (-0.40)")
+
+    # Ultra-low Entropy (Categorical / Constant fakes)
+    if entropy < 1.2:
+        penalty += 0.50
+        reasons.append(f"Low Information Entropy ({entropy:.2f}) -> synthetic (-0.50)")
 
     # -- 3. APPLY & POLARIZE ---------------------------------------
     calibrated = prob + boost - penalty
 
-    # Aggressive Truthful Polarization (v3.0.4)
+    # Aggressive Truthful Polarization (v3.0.5)
     # If we have strong real signals, force it into the 'Authentic' zone
-    if (boost >= 0.55 or recon_err < 0.10) and penalty < 0.30:
-        if calibrated < 0.94:
-            calibrated = 0.94
-            reasons.append("Truthful Detector Boost: Verified overall realism signals -> 94%")
+    if (boost >= 0.50 or recon_err < 0.12) and penalty < 0.25:
+        if calibrated < 0.92:
+            calibrated = 0.92
+            reasons.append("Verified Realism: Ensemble confirms natural data topology -> 92%")
     
     # If we have strong fake signals, force it into the 'Synthetic' zone
-    if penalty >= 0.50 and boost < 0.40:
-        if calibrated > 0.02:
-            calibrated = 0.02
-            reasons.append("Truthful Detector Penalty: Verified synthetic artifacts -> 2%")
+    if (penalty >= 0.55 or (penalty > 0.40 and boost < 0.10)):
+        if calibrated > 0.05:
+            calibrated = 0.05
+            reasons.append("Verified Synthetic: Detected generation artifacts -> 5%")
 
     calibrated = float(max(0.01, min(0.99, calibrated)))
     return calibrated, reasons
