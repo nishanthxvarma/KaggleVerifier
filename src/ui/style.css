@@ -1,87 +1,132 @@
-/* Premium Fintech Theme CSS for KaggleVerifier */
+/* Data Verace — Premium Data Intelligence Aesthetic */
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=JetBrains+Mono:wght@400;700&family=Inter:wght@400;500;600&display=swap');
+
+:root {
+    --obsidian: #050505;
+    --aqua: #00FFFF;
+    --aqua-muted: rgba(0, 255, 255, 0.1);
+    --gold: #FFD700;
+    --gold-dim: rgba(255, 215, 0, 0.3);
+    --text-primary: #F8FAFC;
+    --text-secondary: #94A3B8;
+    --glass-bg: rgba(15, 15, 15, 0.8);
+}
+
 [data-testid="stAppViewContainer"] {
-    background-color: #0F172A;
-    color: #F8FAFC;
+    background-color: var(--obsidian);
+    background-image: 
+        radial-gradient(circle at 50% 50%, rgba(0, 255, 255, 0.03) 0%, transparent 80%),
+        repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.01) 0px, rgba(255, 255, 255, 0.01) 1px, transparent 1px, transparent 10px);
+    color: var(--text-primary);
     font-family: 'Inter', sans-serif;
 }
 
 [data-testid="stSidebar"] {
-    background-color: #1E293B;
-    border-right: 1px solid #334155;
+    background-color: #0A0A0A;
+    border-right: 1px solid #1A1A1A;
 }
 
-/* Glassmorphism for metric cards and containers */
+/* Redesigned Glass Container with Gold Top Glow */
 .glass-container {
-    background: rgba(30, 41, 59, 0.7);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border-radius: 16px;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    padding: 24px;
-    margin-bottom: 20px;
-    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+    background: var(--glass-bg);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-top: 2px solid var(--gold-dim);
+    padding: 28px;
+    margin-bottom: 24px;
+    box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.8), 0 0 20px rgba(0, 255, 255, 0.02);
+    transition: transform 0.3s ease, border-top-color 0.3s ease;
 }
 
-/* Custom styling for headers */
-h1, h2, h3 {
-    color: #F8FAFC !important;
+.glass-container:hover {
+    border-top-color: var(--gold);
+    transform: translateY(-2px);
+}
+
+/* Editorial Typography */
+h1, .logo-text {
+    font-family: 'Playfair Display', serif;
+    letter-spacing: -1px;
+    color: var(--text-primary) !important;
+}
+
+h2, h3 {
+    font-family: 'Inter', sans-serif;
     font-weight: 600 !important;
+    letter-spacing: -0.5px;
+    color: var(--text-primary) !important;
 }
 
-/* Vibrant gradients for buttons */
+.monospace {
+    font-family: 'JetBrains Mono', monospace;
+}
+
+/* Amber-to-Gold CTA Button */
 .stButton > button {
-    background: linear-gradient(135deg, #3B82F6 0%, #2DD4BF 100%);
-    color: white;
+    background: linear-gradient(135deg, #FFBF00 0%, #FFD700 100%);
+    color: #000;
     border: none;
-    border-radius: 8px;
-    padding: 10px 24px;
-    font-weight: 500;
-    transition: all 0.3s ease;
-    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+    border-radius: 4px;
+    padding: 12px 32px;
+    font-weight: 700;
+    font-family: 'Inter', sans-serif;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
+    box-shadow: 0 4px 20px rgba(255, 191, 0, 0.2);
 }
 
 .stButton > button:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 16px rgba(59, 130, 246, 0.5);
-    border: none;
-    color: white;
+    transform: scale(1.02);
+    box-shadow: 0 8px 30px rgba(255, 215, 0, 0.4);
+    background: linear-gradient(135deg, #FFD700 0%, #FFF5B7 100%);
+    color: #000;
 }
 
-/* File uploader hover */
+/* Aqua Accents for File Upload */
 [data-testid="stFileUploadDropzone"] {
-    border: 2px dashed #475569;
-    border-radius: 12px;
-    background-color: #1E293B;
+    border: 1px dashed rgba(0, 255, 255, 0.2);
+    border-radius: 8px;
+    background-color: rgba(0, 255, 255, 0.02);
     transition: all 0.3s ease;
 }
 
 [data-testid="stFileUploadDropzone"]:hover {
-    border-color: #3B82F6;
-    background-color: rgba(59, 130, 246, 0.05);
+    border-color: var(--aqua);
+    background-color: var(--aqua-muted);
 }
 
-/* Metric value styling */
+/* Monospace Metrics */
 [data-testid="stMetricValue"] {
-    font-size: 2.5rem !important;
+    font-family: 'JetBrains Mono', monospace !important;
+    font-size: 2.8rem !important;
     font-weight: 700 !important;
-    color: #38BDF8 !important;
+    color: var(--aqua) !important;
 }
 
-/* Hide Streamlit components */
-#MainMenu {visibility: hidden;}
-footer {visibility: hidden;}
-
-/* Custom Footer */
+/* Footer Rebrand */
 .custom-footer {
     position: fixed;
     bottom: 0;
     left: 0;
     width: 100%;
-    background-color: #0F172A;
-    border-top: 1px solid #334155;
-    padding: 12px 0;
+    background-color: rgba(5, 5, 5, 0.95);
+    backdrop-filter: blur(8px);
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    padding: 16px 0;
     text-align: center;
-    color: #94A3B8;
-    font-size: 14px;
+    color: var(--text-secondary);
+    font-size: 13px;
+    letter-spacing: 0.5px;
     z-index: 999;
 }
+
+.custom-footer span {
+    color: var(--gold);
+    font-weight: 600;
+}
+
+#MainMenu {visibility: hidden;}
+footer {visibility: hidden;}

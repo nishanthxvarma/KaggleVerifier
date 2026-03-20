@@ -1,8 +1,8 @@
-# KaggleVerifier v2
+# Data Verace
 
-**AI-Powered, Ensemble-Based, Domain-Adaptive Dataset Authenticity Detector**
+**Premium, AI-Powered, Ensemble-Based Dataset Authenticity Intelligence**
 
-KaggleVerifier v2 determines whether a tabular CSV dataset is genuinely real-world data or synthetically generated / manipulated — with specialized intelligence for sensor, IoT, and time-series data.
+Data Verace determines whether a tabular dataset is genuinely real-world data or synthetically generated — with specialized intelligence for sensor, IoT, and time-series data.
 
 ---
 

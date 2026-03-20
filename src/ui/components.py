@@ -9,32 +9,32 @@ import numpy as np
 # Core UI Helpers
 # ──────────────────────────────────────────────────────────────────
 
-def render_metric_card(title: str, value: str, trend: str = None, color: str = "#38BDF8"):
-    """Sleek glassmorphic metric block."""
+def render_metric_card(title: str, value: str, trend: str = None, color: str = "#00FFFF"):
+    """Sleek obsidian metric block with gold highlight."""
     st.markdown(f"""
     <div class="glass-container">
-        <div style="font-size: 0.9rem; color: #94A3B8; text-transform: uppercase; letter-spacing: 0.05em;">{title}</div>
-        <div style="font-size: 2.2rem; font-weight: 700; color: {color}; margin: 8px 0;">{value}</div>
-        {f'<div style="font-size: 0.85rem; color: #2DD4BF;">{trend}</div>' if trend else ''}
+        <div style="font-size: 0.8rem; color: #94A3B8; text-transform: uppercase; letter-spacing: 0.1em; font-family: 'Inter';">{title}</div>
+        <div style="font-size: 2.2rem; font-weight: 700; color: {color}; margin: 8px 0; font-family: 'JetBrains Mono';">{value}</div>
+        {f'<div style="font-size: 0.8rem; color: #FFD700; opacity: 0.8;">{trend}</div>' if trend else ''}
     </div>
     """, unsafe_allow_html=True)
 
 
 def render_verdict_badge(prob: float):
-    """Big high-contrast verdict badge: Authentic vs Fake."""
+    """Deep-contrast branding verdict badge."""
     if prob > 0.75:
-        label, color, bg = "VERIFIED AUTHENTIC", "#10B981", "rgba(16, 185, 129, 0.15)"
+        label, color, bg = "VERIFIED AUTHENTIC", "#00FFFF", "rgba(0, 255, 255, 0.05)"
     elif prob > 0.60:
-        label, color, bg = "LIKELY AUTHENTIC", "#34D399", "rgba(52, 211, 153, 0.1)"
+        label, color, bg = "PROBABLE AUTHENTICITY", "#34D399", "rgba(52, 211, 153, 0.05)"
     elif prob > 0.40:
-        label, color, bg = "SUSPICIOUS / UNCERTAIN", "#F59E0B", "rgba(245, 158, 11, 0.1)"
+        label, color, bg = "SIGNALS UNCERTAIN", "#FFD700", "rgba(255, 215, 0, 0.05)"
     else:
-        label, color, bg = "FAKE / SYNTHETIC / TAMPERED", "#EF4444", "rgba(239, 68, 68, 0.15)"
+        label, color, bg = "SYNTHETIC ARTIFACT DETECTED", "#EF4444", "rgba(239, 68, 68, 0.08)"
     
     st.markdown(f"""
-    <div style="text-align: center; padding: 20px; border-radius: 12px; border: 2px solid {color}; background: {bg}; margin-bottom: 25px;">
-        <div style="font-size: 0.85rem; color: #94A3B8; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 5px;">Final Verdict</div>
-        <div style="font-size: 1.8rem; font-weight: 800; color: {color};">{label}</div>
+    <div style="text-align: center; padding: 24px; border-radius: 4px; border: 1px solid {color}; background: {bg}; margin-bottom: 30px;">
+        <div style="font-size: 0.75rem; color: #94A3B8; text-transform: uppercase; letter-spacing: 0.2em; margin-bottom: 10px; font-family:'Inter'; font-weight:500;">Intelligence Verdict</div>
+        <div style="font-size: 1.8rem; font-weight: 700; color: {color}; font-family:'Playfair Display'; letter-spacing:0.02em;">{label}</div>
     </div>
     """, unsafe_allow_html=True)
 
@@ -45,18 +45,18 @@ def render_dataset_type_badge(context: dict):
     col   = context.get("ts_column")
 
     badge_map = {
-        "sensor_iot":  ("📡", "Sensor / IoT Time-Series Detected", "#0EA5E9", "#0C4A6E"),
-        "timeseries":  ("⏱️", "Sequential Time-Series Detected",   "#8B5CF6", "#2E1065"),
-        "tabular":     ("📊", "Standard Tabular Data",              "#10B981", "#064E3B"),
+        "sensor_iot":  ("📡", "Sensor Domain Verified",  "#00FFFF", "rgba(0, 255, 255, 0.05)"),
+        "timeseries":  ("⏱️", "Sequential Intel Detected", "#FFD700", "rgba(255, 215, 0, 0.05)"),
+        "tabular":     ("📊", "Standard Tabular Matrix", "#F8FAFC", "rgba(255, 255, 255, 0.05)"),
     }
     icon, label, fg, bg = badge_map.get(dtype, badge_map["tabular"])
-    col_hint = f"  ·  Timestamp: <b>{col}</b>" if col else ""
+    col_hint = f"  ·  Source: <span style='font-family:monospace;'>{col}</span>" if col else ""
 
     st.markdown(f"""
     <div style="display:inline-block; background:{bg}; border:1px solid {fg};
-                border-radius:24px; padding:6px 20px; margin-bottom:18px;">
-        <span style="color:{fg}; font-weight:700; font-size:0.97rem;">{icon}&nbsp; {label}</span>
-        <span style="color:#94A3B8; font-size:0.85rem;">{col_hint}</span>
+                border-radius:4px; padding:6px 20px; margin-bottom:24px;">
+        <span style="color:{fg}; font-weight:600; font-size:0.9rem; letter-spacing:0.05em; text-transform:uppercase;">{icon}&nbsp; {label}</span>
+        <span style="color:#94A3B8; font-size:0.8rem;">{col_hint}</span>
     </div>
     """, unsafe_allow_html=True)
 
@@ -159,8 +159,8 @@ def render_explanation_panel(feats: dict):
                 st.markdown(f"- {r}")
 
         if raw is not None:
-            st.markdown(f"<div style='font-size:0.75rem; color:#64748B; margin-top:20px;'>"
-                        f"Technical: Ensemble v3 Raw Probability: {raw*100:.1f}%</div>", 
+            st.markdown(f"<div style='font-size:0.7rem; color:#475569; margin-top:20px; font-family:monospace;'>"
+                        f"Technical: Data Verace Core Intelligence Raw P: {raw*100:.1f}%</div>", 
                         unsafe_allow_html=True)
 
 
@@ -258,6 +258,6 @@ def render_timeseries_stats_table(feats: dict):
 def render_footer():
     st.markdown("""
     <div class="custom-footer">
-        <b>KaggleVerifier v3</b> · Truthful Detector · Deep Manifold Analytics
+        <span>Data Verace</span> · Premium Data Intelligence · Built for Serious Analysts
     </div>
     """, unsafe_allow_html=True)

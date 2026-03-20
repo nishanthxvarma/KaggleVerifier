@@ -23,8 +23,8 @@ from src.ui.components import (
 
 # ── Page Config ──────────────────────────────────────────────────
 st.set_page_config(
-    page_title="KaggleVerifier – AI Dataset Authenticity",
-    page_icon="🔎",
+    page_title="Data Verace — Premium Data Intelligence",
+    page_icon="💎",
     layout="wide",
     initial_sidebar_state="collapsed",
 )
@@ -37,15 +37,15 @@ except Exception:
     pass
 
 # ── Pipeline singleton ────────────────────────────────────────────
-@st.cache_resource(show_spinner="Loading AI ensemble v3.0.5…")
+@st.cache_resource(show_spinner="Initializing Data Verace Intelligence Engine…")
 def get_pipeline(version_str="3.0.5"): # Forced reload
     return DetectionPipeline()
 
 pipeline = get_pipeline()
 # Diagnostic: Show model status in sidebar/expander hiddenly or just ensure it reloads
 if st.sidebar.checkbox("Show Technical Diagnostics", value=False):
-    st.sidebar.write(f"Pipeline: **v3.0.5 (Truthful)**")
-    st.sidebar.write(f"Pipeline Active: {'YES' if pipeline.use_ensemble else 'LEGACY'}")
+    st.sidebar.write(f"Engine: **Data Verace Core v3.0.5**")
+    st.sidebar.write(f"Status: **Operational**")
     st.sidebar.write(f"Model Path: {os.path.abspath('models/ensemble_v2.pkl')}")
     st.sidebar.write(f"Model Found: {os.path.exists('models/ensemble_v2.pkl')}")
     st.sidebar.write(f"Working Dir: {os.getcwd()}")
@@ -68,15 +68,15 @@ if st.sidebar.checkbox("Show Technical Diagnostics", value=False):
 
 # ── Header ────────────────────────────────────────────────────────
 st.markdown(
-    "<h1 style='text-align:center; font-size:3.5rem; letter-spacing:-2px; margin-bottom:0;'>"
-    "Kaggle<span style='color:#38BDF8;'>Verifier</span> <sup style='font-size:1rem;color:#10B981;'>v3</sup>"
+    "<h1 style='text-align:center; font-size:4.5rem; margin-bottom:0;' class='logo-text'>"
+    "Data <span style='color:#00FFFF;'>Verace</span>"
     "</h1>",
     unsafe_allow_html=True,
 )
 st.markdown(
-    "<h3 style='text-align:center; color:#94A3B8; font-weight:400; font-size:1.2rem; "
-    "margin-top:0; margin-bottom:40px;'>"
-    "Truthful Detector · Deep Pipeline · Unsupervised Manifold Analytics"
+    "<h3 style='text-align:center; color:#94A3B8; font-weight:400; font-size:1.1rem; "
+    "margin-top:0; margin-bottom:50px; letter-spacing: 0.2em; text-transform:uppercase;'>"
+    "Built for Serious Analysts"
     "</h3>",
     unsafe_allow_html=True,
 )
@@ -106,10 +106,10 @@ if not st.session_state.results:
     c1, c2, c3 = st.columns([1, 2, 1])
     with c2:
         st.markdown('<div class="glass-container">', unsafe_allow_html=True)
-        st.markdown("<h3 style='text-align:center;'>Upload Dataset (CSV)</h3>", unsafe_allow_html=True)
+        st.markdown("<h3 style='text-align:center; letter-spacing:0.05em;'>Ingest Dataset (CSV)</h3>", unsafe_allow_html=True)
         uploaded_file = st.file_uploader("", type=["csv"])
         st.markdown("---")
-        analyze_btn = st.button("🚀 Start AI Analysis Pipeline", use_container_width=True)
+        analyze_btn = st.button("EXECUTE ANALYSIS PIELINE", use_container_width=True)
         st.markdown("</div>", unsafe_allow_html=True)
 
         if analyze_btn:
